@@ -1,0 +1,173 @@
+/*
+ * Copyright (c) 2019. Aberic - All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package raft4go;
+
+// node 节点信息
+message Node {
+    // 节点ID
+    string id = 1;
+    // 节点地址
+    string url = 2;
+    // 节点异常次数，异常次数到达或超过3次，则表示该节点异常
+    int32 unusualTimes = 3;
+}
+
+// data 匹配数据对象
+message Data {
+    // 数据key
+    string key = 1;
+    // 数据hash
+    string hash = 2;
+    // 当前配置版本 index 递增
+    int32 version = 3;
+}
+
+// ReqHeartBeat 用于Leader节点复制日志给其他节点，也作为心跳
+//
+// prevLogIndex和prevLogTerm表示上一次发送的日志的索引和任期，用于保证收到的日志是连续的
+message ReqHeartBeat {
+    // 自身作为Leader节点的任期
+    int32 term = 1;
+    // 自身作为Leader节点的ID
+    string id = 2;
+    // 自身作为Leader节点的地址
+    string url = 3;
+    // 自身作为Leader节点所有数据集hash，用于比较彼此数据
+    string hash = 4;
+}
+
+// RespHeartBeat 接收者实现逻辑
+//
+// 返回false，如果收到的任期比当前任期小
+//
+// 返回false，如果不包含之前的日志条目（没有匹配prevLogIndex和prevLogTerm）
+//
+// 如果存在index相同但是term不相同的日志，删除从该位置开始所有的日志
+//
+// 追加所有不存在的日志
+//
+// 如果leaderCommit>commitIndex，将commitIndex设置为commitIndex = min(leaderCommit, index of last new entry)
+message RespHeartBeat {
+}
+
+// ReqNodeList 请求当前集群节点集合
+message ReqNodeList {
+    repeated Node nodes = 1;
+}
+
+// RespNodeList 应答当前集群节点集合
+message RespNodeList {
+    repeated Node nodes = 1;
+}
+
+// ReqDataList 请求当前集群数据集合
+message ReqDataList {
+}
+
+// RespDataList 应答当前集群数据集合
+message RespDataList {
+    repeated Data dataArr = 1;
+}
+
+// ReqData 请求当前集群指定key数据
+message ReqData {
+    // 数据key
+    string key = 1;
+}
+
+// RespData 应答当前集群指定key数据
+message RespData {
+    // 当前集群指定key数据信息的值
+    bytes value = 6;
+}
+
+// ReqSyncData 用于Leader节点同步数据给其他节点
+message ReqSyncData {
+    // Leader节点的任期
+    int32 term = 1;
+    // Leader节点的ID
+    string leaderId = 2;
+    // Leader节点的地址
+    string leaderUrl = 3;
+    // 当前配置版本 index 递增
+    int32 version = 4;
+    // 当前term同步配置信息的key
+    string key = 5;
+    // 当前term同步配置信息的值
+    bytes value = 6;
+}
+
+// RespSyncData 接收者实现逻辑
+//
+// 返回false，如果收到的任期比当前任期小
+//
+// 返回false，如果不包含之前的日志条目（没有匹配prevLogIndex和prevLogTerm）
+//
+// 如果存在index相同但是term不相同的日志，删除从该位置开始所有的日志
+//
+// 追加所有不存在的日志
+//
+// 如果leaderCommit>commitIndex，将commitIndex设置为commitIndex = min(leaderCommit, index of last new entry)
+message RespSyncData {
+    // 当前任期号，用于Leader节点更新自己的任期（应该说是如果这个返回值比Leader自身的任期大，那么Leader需要更新自己的任期）
+    int32 term = 1;
+    // 如果Follower节点匹配prevLogIndex和prevLogTerm，返回true
+    bool success = 2;
+}
+
+// reqVote 用于Candidate获取选票
+message ReqVote {
+    // Candidate的ID
+    string id = 2;
+    // Candidate的URL
+    string url = 3;
+    // Candidate的任期
+    int32 term = 1;
+    // 时间戳ns
+    int64 timestamp = 7;
+}
+
+// 接收者的实现逻辑
+//
+// 返回false，如果收到的任期比当前任期小
+//
+// 如果本地状态中votedFor为null或者candidateId，且candidate的日志等于或多余（按照index判断）接收者的日志，则接收者投票给candidate，即返回true
+message RespVote {
+    // true表示给Candidate投票
+    bool voteGranted = 2;
+}
+
+service Raft {
+    // Heartbeat 发送心跳
+    rpc Heartbeat (ReqHeartBeat) returns (RespHeartBeat) {
+    }
+    // NodeList 请求集群节点集合
+    rpc NodeList (ReqNodeList) returns (RespNodeList) {
+    }
+    // Data 请求当前集群指定key数据
+    rpc Data (ReqData) returns (RespData) {
+    }
+    // DataList 请求集群数据集合
+    rpc DataList (ReqDataList) returns (RespDataList) {
+    }
+    // SyncData 同步数据
+    rpc SyncData (ReqSyncData) returns (RespSyncData) {
+    }
+    // Vote 发起选举，索要选票
+    rpc Vote (ReqVote) returns (RespVote) {
+    }
+}
