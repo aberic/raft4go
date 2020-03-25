@@ -34,6 +34,7 @@ type leader struct {
 
 // work 开始本职工作
 func (l *leader) start() {
+	gnomon.Log().Info("raft", gnomon.Log().Field("leader", "start"))
 	l.base.setStatus(RoleStatusLeader)
 	l.scheduled = time.NewTimer(time.Millisecond * time.Duration(timeout))
 	l.stop = make(chan struct{}, 1)
@@ -70,6 +71,7 @@ func (l *leader) update(hb *heartBeat) {
 
 // release 角色释放
 func (l *leader) release() {
+	gnomon.Log().Info("raft", gnomon.Log().Field("leader", "release"))
 	l.cancel()
 	l.stop <- struct{}{} // 关闭检查leader节点是否状态超时
 	l.scheduled.Stop()

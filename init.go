@@ -28,6 +28,8 @@ package raft4go
 
 import (
 	"github.com/aberic/gnomon"
+	"google.golang.org/grpc"
+	"net"
 	"sync"
 )
 
@@ -41,11 +43,13 @@ const (
 	cluster      = "CLUSTER"      // CLUSTER=1=127.0.0.1:19865:19877,2=127.0.0.2:19865:19877,3=127.0.0.3:19865:19877
 	timeCheckEnv = "TIME_CHECK"   // raft心跳定时检查超时时间
 	timeoutEnv   = "TIMEOUT"      // raft心跳定时/超时ms
+	portEnv      = "PORT"         // raft服务开放端口号，默认19877
 )
 
 func init() {
 	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 800)
 	timeout = gnomon.Env().GetInt64D(timeoutEnv, 500)
+	port = gnomon.Env().GetD(portEnv, "19877")
 }
 
 var (
@@ -53,16 +57,63 @@ var (
 	once      sync.Once // once 确保Raft的启动方法只会被调用一次
 	timeCheck int64     // raft心跳定时检查超时时间
 	timeout   int64     // raft心跳定时/超时ms
+	port      string    // raft服务开放端口号，默认19877
 )
 
+func gRPCListener() {
+	var (
+		listener net.Listener
+		err      error
+	)
+	//  创建server端监听端口
+	if listener, err = net.Listen("tcp", gnomon.String().StringBuilder(":", port)); nil != err {
+		panic(err)
+	}
+	//  创建gRPC的server
+	rpcServer := grpc.NewServer()
+	// 注册自定义服务
+	RegisterRaftServer(rpcServer, &Server{})
+	//  启动gRPC服务
+	if err = rpcServer.Serve(listener); nil != err {
+		panic(err)
+	}
+}
+
 // RaftStart 启动且只能启动一次Raft服务
-func RaftStart() error {
+func RaftStart() {
 	gnomon.Log().Info("raft", gnomon.Log().Field("new", "new instance raft"))
 	once.Do(func() {
 		raft = &Raft{}
 		raft.start()
+		go gRPCListener()
 	})
-	return nil
+}
+
+// RaftStartWithParams 启动且只能启动一次Raft服务
+//
+// node 自身节点信息
+//
+// nodes 集群节点信息
+//
+// timeCheck  raft心跳定时检查超时时间
+//
+// timeout raft心跳定时/超时ms
+func RaftStartWithParams(node *Node, nodes []*Node, timeCheckReq, timeoutReq int64, portReq string) {
+	if timeCheckReq != 0 {
+		timeCheck = timeCheckReq
+	}
+	if timeoutReq != 0 {
+		timeout = timeoutReq
+	}
+	if gnomon.String().IsNotEmpty(portReq) {
+		port = portReq
+	}
+	gnomon.Log().Info("raft", gnomon.Log().Field("new", "new instance raft"))
+	once.Do(func() {
+		raft = &Raft{}
+		raft.startWithParams(node, nodes)
+		go gRPCListener()
+	})
 }
 
 // Status 获取角色状态，0-leader、1-candidate、2-follower

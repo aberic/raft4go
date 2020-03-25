@@ -32,6 +32,7 @@ type candidate struct {
 
 // work 开始本职工作
 func (c *candidate) start() {
+	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "start"))
 	c.base.setStatus(RoleStatusCandidate)
 	c.timestamp = time.Now().UnixNano()
 	c.ctx, c.cancel = context.WithCancel(context.Background())
@@ -47,6 +48,7 @@ func (c *candidate) update(hb *heartBeat) {
 
 // release 角色释放
 func (c *candidate) release() {
+	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "release"))
 	c.cancel()
 	c.ctx = nil
 	c.cancel = nil

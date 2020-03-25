@@ -35,6 +35,7 @@ type follower struct {
 
 // work 开始本职工作
 func (f *follower) start() {
+	gnomon.Log().Info("raft", gnomon.Log().Field("follow", "start"))
 	f.base.setStatus(RoleStatusFollower)
 	f.scheduled = time.NewTimer(time.Millisecond * time.Duration(timeCheck))
 	f.stop = make(chan struct{}, 1)
@@ -62,6 +63,7 @@ func (f *follower) update(hb *heartBeat) {
 
 // release 角色释放
 func (f *follower) release() {
+	gnomon.Log().Info("raft", gnomon.Log().Field("follow", "release"))
 	f.stop <- struct{}{} // 关闭检查leader节点是否状态超时
 	f.synced = false     // 重置同步状态
 	f.scheduled.Stop()

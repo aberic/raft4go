@@ -43,6 +43,27 @@ func (r *Raft) start() {
 	})
 }
 
+// Start Raft启用方法
+//
+// node 自身节点信息
+//
+// nodes 集群节点信息
+func (r *Raft) startWithParams(node *Node, nodes []*Node) {
+	if nil == node || nil == nodes {
+		gnomon.Log().Error("raft", gnomon.Log().Field("describe", "startWithParams fail"),
+			gnomon.Log().Errs("params can not be nil"))
+		return
+	}
+	r.once.Do(func() {
+		r.init()
+		gnomon.Log().Info("raft init success")
+		r.initWithParams(node, nodes)
+		gnomon.Log().Info("raft params init success")
+		r.initRole()
+		gnomon.Log().Info("raft role init success")
+	})
+}
+
 // init raft结构初始化
 func (r *Raft) init() {
 	r.persistence = &persistence{
@@ -89,7 +110,21 @@ func (r *Raft) initEnv() {
 			gnomon.Log().Field("addr", r.persistence.node.Url), gnomon.Log().Field("id", r.persistence.node.Id))
 	}
 	raft.persistence.node.UnusualTimes = -1
-	nodesStr := gnomon.Env().Get(cluster)
+	r.initCluster(gnomon.Env().Get(cluster))
+}
+
+// initEnv raft环境变量初始化
+func (r *Raft) initWithParams(node *Node, nodes []*Node) {
+	raft.persistence.node = node
+	raft.persistence.node.UnusualTimes = -1
+	raft.persistence.nodes = nodes
+}
+
+// initCluster 初始化集群节点
+func (r *Raft) initCluster(nodesStr string) {
+	if gnomon.String().IsEmpty(nodesStr) {
+		nodesStr = gnomon.Env().Get(cluster)
+	}
 	gnomon.Log().Info("raft", gnomon.Log().Field("node cluster", nodesStr))
 	if gnomon.String().IsNotEmpty(nodesStr) {
 		clusterArr := strings.Split(nodesStr, ",")
