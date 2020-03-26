@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"github.com/aberic/gnomon"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -32,11 +33,11 @@ type candidate struct {
 
 // work 开始本职工作
 func (c *candidate) start() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "start"))
+	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "start"), gnomon.Log().Field("term", raft.persistence.term))
 	c.base.setStatus(RoleStatusCandidate)
 	c.timestamp = time.Now().UnixNano()
 	c.ctx, c.cancel = context.WithCancel(context.Background())
-	c.votes()
+	go c.votes()
 }
 
 // update 更新状态
@@ -50,8 +51,8 @@ func (c *candidate) update(hb *heartBeat) {
 func (c *candidate) release() {
 	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "release"))
 	c.cancel()
-	c.ctx = nil
-	c.cancel = nil
+	//c.ctx = nil
+	//c.cancel = nil
 }
 
 // put 角色所属集群新增数据
@@ -96,7 +97,7 @@ func (c *candidate) votes() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if voteGranted := reqVote(c.ctx, node.Url, &ReqVote{
+			if voteGranted := reqVote(c.ctx, node, &ReqVote{
 				Id:        raft.persistence.node.Id,
 				Url:       raft.persistence.node.Url,
 				Term:      raft.persistence.term + 1,
@@ -107,6 +108,9 @@ func (c *candidate) votes() {
 		}()
 	}
 	wg.Wait()
+	gnomon.Log().Info("raft",
+		gnomon.Log().Field("vote", gnomon.String().StringBuilder("len(votes)+1 = ",
+			strconv.Itoa(len(votes)+1), " and nodeCount/2 = ", strconv.Itoa(nodeCount/2))))
 	if len(votes)+1 > nodeCount/2 {
 		raft.persistence.term += 1
 		raft.persistence.setLeader(raft.persistence.node.Id, raft.persistence.node.Url)

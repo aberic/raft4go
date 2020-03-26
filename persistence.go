@@ -14,7 +14,11 @@
 
 package raft4go
 
-import "sync"
+import (
+	"google.golang.org/grpc"
+	"sync"
+	"time"
+)
 
 // votedFor 投票结果
 type votedFor struct {
@@ -31,10 +35,10 @@ func (v *votedFor) set(id string, term int32, timestamp int64) {
 
 // persistence 所有角色都拥有的持久化的状态（在响应RPC请求之前变更且持久化的状态）
 type persistence struct {
-	leader    *Node        // 当前任务Leader
+	leader    *nodal       // 当前任务Leader
 	term      int32        // 服务器的任期，初始为0，递增
-	node      *Node        // 自身节点信息
-	nodes     []*Node      // 当前Raft可见节点集合
+	node      *nodal       // 自身节点信息
+	nodes     []*nodal     // 当前Raft可见节点集合
 	nodesLock sync.RWMutex // 当前Raft可见节点集合锁
 	votedFor  *votedFor    // 在当前获得选票的候选人的 Id
 	data      *data        // raft数据内容
@@ -48,18 +52,51 @@ func (p *persistence) setLeader(id, url string) {
 func (p *persistence) appendNode(node *Node) {
 	defer p.nodesLock.Unlock()
 	p.nodesLock.Lock()
-	p.nodes = append(p.nodes, node)
+	if nodal, err := newNode(node.Id, node.Url); nil == err {
+		p.nodes = append(p.nodes, nodal)
+	}
 }
 
 func (p *persistence) appendNodes(nodeList []*Node) {
 	defer p.nodesLock.Unlock()
 	p.nodesLock.Lock()
-	p.nodes = append(p.nodes, nodeList...)
+	var nodalList []*nodal
+	for _, node := range nodeList {
+		if nodal, err := newNode(node.Id, node.Url); nil == err {
+			nodalList = append(nodalList, nodal)
+		}
+	}
+	p.nodes = append(p.nodes, nodalList...)
 }
 
 func (p *persistence) Nodes() []*Node {
 	defer p.nodesLock.RUnlock()
 	p.nodesLock.RLock()
-	nodes := p.nodes
+	var nodes []*Node
+	for _, nodal := range p.nodes {
+		nodes = append(nodes, &Node{Id: nodal.Id, Url: nodal.Url})
+	}
 	return nodes
+}
+
+type nodal struct {
+	Node
+	pool *pool
+}
+
+func newNode(id, url string) (*nodal, error) {
+	if p, err := newPool(10, 100, 5*time.Second, func() (c conn, err error) {
+		return grpc.Dial(url, grpc.WithInsecure())
+	}); nil != err {
+		return nil, err
+	} else {
+		return &nodal{
+			Node: Node{
+				Id:           id,
+				Url:          url,
+				UnusualTimes: 0,
+			},
+			pool: p,
+		}, nil
+	}
 }

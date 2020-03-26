@@ -35,12 +35,12 @@ type follower struct {
 
 // work 开始本职工作
 func (f *follower) start() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("follow", "start"))
+	gnomon.Log().Info("raft", gnomon.Log().Field("follow", "start"), gnomon.Log().Field("term", raft.persistence.term))
 	f.base.setStatus(RoleStatusFollower)
 	f.scheduled = time.NewTimer(time.Millisecond * time.Duration(timeCheck))
 	f.stop = make(chan struct{}, 1)
 	f.refreshTime()
-	f.checkTimeOut()
+	go f.checkTimeOut()
 }
 
 // update 更新状态
@@ -113,14 +113,14 @@ func (f *follower) refreshTime() {
 //
 // leader节点会定时发送心跳，如果心跳间隔时间小于 timeout 则会判定超时
 func (f *follower) checkTimeOut() {
-	f.scheduled.Reset(time.Microsecond * time.Duration(timeCheck))
+	f.scheduled.Reset(time.Millisecond * time.Duration(timeCheck))
 	for {
 		select {
 		case <-f.scheduled.C:
 			if time.Now().UnixNano()/1e6-f.time > timeout {
 				raft.tuneCandidate()
 			} else {
-				f.scheduled.Reset(time.Microsecond * time.Duration(timeCheck))
+				f.scheduled.Reset(time.Millisecond * time.Duration(timeCheck))
 			}
 		case <-f.stop:
 			return

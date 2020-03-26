@@ -55,7 +55,11 @@ func (s *Server) NodeList(_ context.Context, req *ReqNodeList) (resp *RespNodeLi
 			}
 		}
 		if !have {
-			resp.Nodes = append(resp.Nodes, nodeLocal)
+			resp.Nodes = append(resp.Nodes, &Node{
+				Id:           nodeLocal.Id,
+				Url:          nodeLocal.Url,
+				UnusualTimes: nodeLocal.UnusualTimes,
+			})
 		}
 	}
 
@@ -102,24 +106,24 @@ func (s *Server) SyncData(_ context.Context, req *ReqSyncData) (resp *RespSyncDa
 
 // Vote 接收发起选举，索要选票
 func (s *Server) Vote(_ context.Context, req *ReqVote) (resp *RespVote, err error) {
-	if req.Term > raft.persistence.term {
-		haveNode := false
-		for _, node := range raft.persistence.nodes {
-			if node.Id == req.Id {
-				if node.Url != req.Url {
-					errStr := fmt.Sprintf(
-						"cluster info error, now vote, req.id is %s, have.id is %s, req.url is %s, have.url is %s",
-						req.Id, node.Id, req.Url, node.Url)
-					return &RespVote{VoteGranted: false}, errors.New(errStr)
-				}
-				haveNode = true
+	haveNode := false
+	for _, node := range raft.persistence.nodes {
+		if node.Id == req.Id {
+			if node.Url != req.Url {
+				errStr := fmt.Sprintf(
+					"cluster info error, now vote, req.id is %s, have.id is %s, req.url is %s, have.url is %s",
+					req.Id, node.Id, req.Url, node.Url)
+				return &RespVote{VoteGranted: false}, errors.New(errStr)
 			}
+			haveNode = true
 		}
-		if !haveNode {
-			raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
-		}
+	}
+	if !haveNode {
+		raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
+	}
+	if req.Term > raft.persistence.term {
 		raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp)
 		return &RespVote{VoteGranted: true}, nil
 	}
-	return &RespVote{VoteGranted: false}, errors.New("term less-than")
+	return &RespVote{VoteGranted: false}, fmt.Errorf("term %v less-than %v", req.Term, raft.persistence.term)
 }

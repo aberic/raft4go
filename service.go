@@ -21,10 +21,10 @@ import (
 )
 
 // reqHeartbeat 发送心跳
-func reqHeartbeat(ctx context.Context, node *Node, in *ReqHeartBeat) {
+func reqHeartbeat(ctx context.Context, node *nodal, in *ReqHeartBeat) {
 	var resultChan = make(chan struct{})
 	go func() {
-		if _, err := rpc(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
+		if _, err := rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -194,7 +194,7 @@ func reqSyncData(ctx context.Context, url string, in *ReqSyncData) error {
 }
 
 // reqVote 发起选举，索要选票
-func reqVote(ctx context.Context, url string, in *ReqVote) bool {
+func reqVote(ctx context.Context, node *nodal, in *ReqVote) bool {
 	var (
 		resultChan = make(chan bool)
 		errChan    = make(chan error)
@@ -204,7 +204,7 @@ func reqVote(ctx context.Context, url string, in *ReqVote) bool {
 			resp interface{}
 			err  error
 		)
-		resp, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求

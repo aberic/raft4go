@@ -47,8 +47,8 @@ const (
 )
 
 func init() {
-	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 800)
-	timeout = gnomon.Env().GetInt64D(timeoutEnv, 500)
+	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 1000)
+	timeout = gnomon.Env().GetInt64D(timeoutEnv, 1500)
 	port = gnomon.Env().GetD(portEnv, "19877")
 }
 
@@ -65,6 +65,7 @@ func gRPCListener() {
 		listener net.Listener
 		err      error
 	)
+	gnomon.Log().Info("raft", gnomon.Log().Field("gRPC", "start"), gnomon.Log().Field("port", port))
 	//  创建server端监听端口
 	if listener, err = net.Listen("tcp", gnomon.String().StringBuilder(":", port)); nil != err {
 		panic(err)
@@ -77,15 +78,16 @@ func gRPCListener() {
 	if err = rpcServer.Serve(listener); nil != err {
 		panic(err)
 	}
+	gnomon.Log().Warn("raft", gnomon.Log().Field("gRPC", err))
 }
 
 // RaftStart 启动且只能启动一次Raft服务
 func RaftStart() {
 	gnomon.Log().Info("raft", gnomon.Log().Field("new", "new instance raft"))
 	once.Do(func() {
+		go gRPCListener()
 		raft = &Raft{}
 		raft.start()
-		go gRPCListener()
 	})
 }
 
@@ -110,9 +112,9 @@ func RaftStartWithParams(node *Node, nodes []*Node, timeCheckReq, timeoutReq int
 	}
 	gnomon.Log().Info("raft", gnomon.Log().Field("new", "new instance raft"))
 	once.Do(func() {
+		go gRPCListener()
 		raft = &Raft{}
 		raft.startWithParams(node, nodes)
-		go gRPCListener()
 	})
 }
 
@@ -134,6 +136,6 @@ func Get(key string) ([]byte, error) {
 }
 
 // NodeList 查看当前集群中节点集合，包括自身
-func NodeList() []*Node {
+func NodeList() []*nodal {
 	return append(raft.persistence.nodes, raft.persistence.node)
 }

@@ -39,6 +39,23 @@ func rpc(url string, business func(conn *grpc.ClientConn) (interface{}, error)) 
 	return business(conn)
 }
 
+// rpc 通过rpc进行通信 protoc --go_out=plugins=grpc:. grpc/proto/*.proto
+func rpcPool(pool *pool, business func(conn *grpc.ClientConn) (interface{}, error)) (interface{}, error) {
+	var (
+		c    conn
+		conn *grpc.ClientConn
+		err  error
+	)
+	// 创建一个grpc连接器
+	if c, err = pool.acquire(); nil != err {
+		return nil, err
+	}
+	conn = c.(*grpc.ClientConn)
+	// 请求完毕后关闭连接
+	defer func() { _ = conn.Close() }()
+	return business(conn)
+}
+
 // getGRPCClientIP 取出gRPC客户端的ip地址和端口号
 //
 // string form of address (for example, "192.0.2.1:25", "[2001:db8::1]:80")

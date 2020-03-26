@@ -26,9 +26,10 @@ import (
 //
 // 也返回客户端期望的同步结果及从其他节点同步过来的信息
 type Raft struct {
-	persistence *persistence // persistence 持久化的状态（在响应RPC请求之前变更且持久化的状态）
-	role        role         // raft当前角色
-	once        sync.Once    // 确保Raft的启动方法只会被调用一次
+	persistence    *persistence // persistence 持久化的状态（在响应RPC请求之前变更且持久化的状态）
+	role           role         // raft当前角色
+	once           sync.Once    // 确保Raft的启动方法只会被调用一次
+	roleChangeLock sync.Mutex
 }
 
 // Start Raft启用方法
@@ -67,10 +68,10 @@ func (r *Raft) startWithParams(node *Node, nodes []*Node) {
 // init raft结构初始化
 func (r *Raft) init() {
 	r.persistence = &persistence{
-		leader: &Node{},
+		leader: &nodal{},
 		term:   0,
-		node:   &Node{},
-		nodes:  []*Node{},
+		node:   &nodal{},
+		nodes:  []*nodal{},
 		votedFor: &votedFor{
 			id:        "",
 			term:      0,
@@ -115,9 +116,9 @@ func (r *Raft) initEnv() {
 
 // initEnv raft环境变量初始化
 func (r *Raft) initWithParams(node *Node, nodes []*Node) {
-	raft.persistence.node = node
+	raft.persistence.node = &nodal{Node: *node, pool: nil}
 	raft.persistence.node.UnusualTimes = -1
-	raft.persistence.nodes = nodes
+	raft.persistence.appendNodes(nodes)
 }
 
 // initCluster 初始化集群节点
@@ -140,11 +141,7 @@ func (r *Raft) initCluster(nodesStr string) {
 				continue
 			}
 			nodeUrl := clusterSplit[1]
-			r.persistence.appendNode(&Node{
-				Id:           id,
-				Url:          nodeUrl,
-				UnusualTimes: 0,
-			})
+			r.persistence.appendNode(&Node{Id: id, Url: nodeUrl, UnusualTimes: 0})
 		}
 	}
 }
@@ -166,6 +163,8 @@ func (r *Raft) initRole() {
 
 // tuneLeader 切换角色为leader
 func (r *Raft) tuneLeader() {
+	defer r.roleChangeLock.Unlock()
+	r.roleChangeLock.Lock()
 	if nil != r.role && r.role.roleStatus() == RoleStatusLeader {
 		return
 	}
@@ -176,6 +175,8 @@ func (r *Raft) tuneLeader() {
 
 // tuneLeader 切换角色为follower
 func (r *Raft) tuneFollower(hb *heartBeat) {
+	defer r.roleChangeLock.Unlock()
+	r.roleChangeLock.Lock()
 	if nil != r.role {
 		if r.role.roleStatus() == RoleStatusFollower {
 			return
@@ -192,6 +193,8 @@ func (r *Raft) tuneFollower(hb *heartBeat) {
 
 // tuneLeader 切换角色为candidate
 func (r *Raft) tuneCandidate() {
+	defer r.roleChangeLock.Unlock()
+	r.roleChangeLock.Lock()
 	if nil != r.role && r.role.roleStatus() == RoleStatusCandidate {
 		return
 	}

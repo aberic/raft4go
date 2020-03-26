@@ -34,12 +34,12 @@ type leader struct {
 
 // work 开始本职工作
 func (l *leader) start() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("leader", "start"))
+	gnomon.Log().Info("raft", gnomon.Log().Field("leader", "start"), gnomon.Log().Field("term", raft.persistence.term))
 	l.base.setStatus(RoleStatusLeader)
 	l.scheduled = time.NewTimer(time.Millisecond * time.Duration(timeout))
 	l.stop = make(chan struct{}, 1)
 	l.ctx, l.cancel = context.WithCancel(context.Background())
-	l.heartbeats()
+	go l.heartbeats()
 }
 
 // update 更新状态
@@ -75,8 +75,8 @@ func (l *leader) release() {
 	l.cancel()
 	l.stop <- struct{}{} // 关闭检查leader节点是否状态超时
 	l.scheduled.Stop()
-	l.ctx = nil
-	l.cancel = nil
+	//l.ctx = nil
+	//l.cancel = nil
 }
 
 // put 角色所属集群新增数据
@@ -134,7 +134,7 @@ func (l *leader) roleStatus() RoleStatus {
 
 // heartbeats 向节点集合发送心跳
 func (l *leader) heartbeats() {
-	l.scheduled.Reset(time.Microsecond * time.Duration(timeout))
+	l.scheduled.Reset(time.Millisecond * time.Duration(timeout))
 	for {
 		select {
 		case <-l.scheduled.C:
@@ -146,7 +146,7 @@ func (l *leader) heartbeats() {
 			for _, node := range raft.persistence.nodes {
 				go reqHeartbeat(l.ctx, node, in)
 			}
-			l.scheduled.Reset(time.Microsecond * time.Duration(timeout))
+			l.scheduled.Reset(time.Millisecond * time.Duration(timeout))
 		case <-l.stop:
 			return
 		}
