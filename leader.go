@@ -111,6 +111,7 @@ func (l *leader) put(key string, value []byte) error {
 	return nil
 }
 
+// syncData 请求同步数据
 func (l *leader) syncData(req *ReqSyncData) error {
 	if req.LeaderId != raft.persistence.node.Id {
 		return fmt.Errorf("cluster status error, now is leader, req.leader.id is %s, raft.leader.id is %s", req.LeaderId, raft.persistence.leader.Id)
@@ -125,6 +126,11 @@ func (l *leader) syncData(req *ReqSyncData) error {
 		di.version = req.Version - 1
 	}
 	return l.put(req.Key, req.Value)
+}
+
+// vote 接收请求投票数据
+func (l *leader) vote(_ *ReqVote) bool {
+	return false
 }
 
 // roleStatus 获取角色状态

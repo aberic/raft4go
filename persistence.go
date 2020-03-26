@@ -15,6 +15,7 @@
 package raft4go
 
 import (
+	"github.com/aberic/gnomon"
 	"google.golang.org/grpc"
 	"sync"
 	"time"
@@ -81,11 +82,11 @@ func (p *persistence) Nodes() []*Node {
 
 type nodal struct {
 	Node
-	pool *pool
+	pool *gnomon.Pond
 }
 
 func newNode(id, url string) (*nodal, error) {
-	if p, err := newPool(10, 100, 5*time.Second, func() (c conn, err error) {
+	if p, err := gnomon.Pool().New(10, 100, 5*time.Second, func() (c gnomon.Conn, err error) {
 		return grpc.Dial(url, grpc.WithInsecure())
 	}); nil != err {
 		return nil, err

@@ -66,6 +66,7 @@ func (c *candidate) put(key string, value []byte) error {
 	return errors.New("cluster status error, now is candidate")
 }
 
+// syncData 请求同步数据
 func (c *candidate) syncData(req *ReqSyncData) error {
 	if req.Term >= raft.persistence.term { // 如果请求任期大于等于自身任期，则可能终止当前候选身份
 		for _, node := range raft.persistence.nodes {
@@ -81,6 +82,16 @@ func (c *candidate) syncData(req *ReqSyncData) error {
 		return nil
 	}
 	return errors.New("cluster status error, now is candidate")
+}
+
+// vote 接收请求投票数据
+func (c *candidate) vote(req *ReqVote) bool {
+	if req.Timestamp < c.timestamp {
+		raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp)
+		raft.tuneFollower(nil)
+		return true
+	}
+	return false
 }
 
 // roleStatus 获取角色状态

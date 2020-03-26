@@ -124,6 +124,8 @@ func (s *Server) Vote(_ context.Context, req *ReqVote) (resp *RespVote, err erro
 	if req.Term > raft.persistence.term {
 		raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp)
 		return &RespVote{VoteGranted: true}, nil
+	} else if req.Term == raft.persistence.term {
+		raft.role.vote(req)
 	}
 	return &RespVote{VoteGranted: false}, fmt.Errorf("term %v less-than %v", req.Term, raft.persistence.term)
 }

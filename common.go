@@ -17,6 +17,7 @@ package raft4go
 import (
 	"context"
 	"fmt"
+	"github.com/aberic/gnomon"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 	"net"
@@ -40,14 +41,14 @@ func rpc(url string, business func(conn *grpc.ClientConn) (interface{}, error)) 
 }
 
 // rpc 通过rpc进行通信 protoc --go_out=plugins=grpc:. grpc/proto/*.proto
-func rpcPool(pool *pool, business func(conn *grpc.ClientConn) (interface{}, error)) (interface{}, error) {
+func rpcPool(pool *gnomon.Pond, business func(conn *grpc.ClientConn) (interface{}, error)) (interface{}, error) {
 	var (
-		c    conn
+		c    gnomon.Conn
 		conn *grpc.ClientConn
 		err  error
 	)
 	// 创建一个grpc连接器
-	if c, err = pool.acquire(); nil != err {
+	if c, err = pool.Acquire(); nil != err {
 		return nil, err
 	}
 	conn = c.(*grpc.ClientConn)
