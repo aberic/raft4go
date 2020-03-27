@@ -87,7 +87,7 @@ func (r *Raft) initEnv() {
 	//_ = os.Setenv(brokerID, "1")
 	//_ = os.Setenv(nodeAddr, "127.0.0.1:19880")
 	//_ = os.Setenv(cluster, "1=127.0.0.1:19877,2=127.0.0.1:19878,3=127.0.0.1:19879")
-	if isK8s := gnomon.Env().GetBool(k8s); isK8s {
+	if k8s := gnomon.Env().GetBool(k8sEnv); k8s {
 		if r.persistence.node.Url = gnomon.Env().Get("HOSTNAME"); gnomon.String().IsEmpty(r.persistence.node.Url) {
 			gnomon.Log().Error("raft", gnomon.Log().Field("describe", "init with k8s fail"),
 				gnomon.Log().Field("addr", r.persistence.node.Url))

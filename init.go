@@ -30,6 +30,8 @@ import (
 	"github.com/aberic/gnomon"
 	"google.golang.org/grpc"
 	"net"
+	"os"
+	"strings"
 	"sync"
 )
 
@@ -37,28 +39,104 @@ import (
 // export GO111MODULE=on
 
 const (
-	k8s          = "K8S"          // K8S=true
-	brokerID     = "BROKER_ID"    // BROKER_ID=1
-	nodeAddr     = "NODE_ADDRESS" // NODE_ADDRESS=example.com NODE_ADDRESS=127.0.0.1:19865:19877
-	cluster      = "CLUSTER"      // CLUSTER=1=127.0.0.1:19865:19877,2=127.0.0.2:19865:19877,3=127.0.0.3:19865:19877
-	timeCheckEnv = "TIME_CHECK"   // raft心跳定时检查超时时间
-	timeoutEnv   = "TIMEOUT"      // raft心跳定时/超时ms
-	portEnv      = "PORT"         // raft服务开放端口号，默认19877
+	k8sEnv            = "RAFT_K8S"               // K8S=true
+	brokerID          = "RAFT_BROKER_ID"         // BROKER_ID=1
+	nodeAddr          = "RAFT_NODE_ADDRESS"      // NODE_ADDRESS=example.com NODE_ADDRESS=127.0.0.1:19865:19877
+	cluster           = "RAFT_CLUSTER"           // CLUSTER=1=127.0.0.1:19865:19877,2=127.0.0.2:19865:19877,3=127.0.0.3:19865:19877
+	timeCheckEnv      = "RAFT_TIME_CHECK"        // raft心跳定时检查超时时间
+	timeoutEnv        = "RAFT_TIMEOUT"           // raft心跳定时/超时ms
+	portEnv           = "RAFT_PORT"              // raft服务开放端口号，默认19877
+	logDirEnv         = "RAFT_LOG_DIR"           // 日志文件目录
+	logFileMaxSizeEnv = "RAFT_LOG_FILE_MAX_SIZE" // 每个日志文件保存的最大尺寸 单位：M
+	logFileMaxAgeEnv  = "RAFT_LOG_FILE_MAX_AGE"  // 文件最多保存多少天
+	logUtcEnv         = "RAFT_LOG_UTC"           // CST & UTC 时间
+	logLevelEnv       = "RAFT_LOG_LEVEL"         // 日志级别(debugLevel/infoLevel/warnLevel/ErrorLevel/panicLevel/fatalLevel)
+	logProductionEnv  = "RAFT_LOG_PRODUCTION"    // 是否生产环境，在生产环境下控制台不会输出任何日志
 )
 
 func init() {
 	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 1000)
 	timeout = gnomon.Env().GetInt64D(timeoutEnv, 1500)
 	port = gnomon.Env().GetD(portEnv, "19877")
+	logFileDir = gnomon.Env().GetD(logDirEnv, os.TempDir())
+	logFileMaxSize = gnomon.Env().GetIntD(logFileMaxSizeEnv, 1024)
+	logFileMaxAge = gnomon.Env().GetIntD(logFileMaxAgeEnv, 7)
+	logUtc = gnomon.Env().GetBool(logUtcEnv)
+	logLevel = gnomon.Env().GetD(logLevelEnv, "Debug")
+	logProduction = gnomon.Env().GetBool(logProductionEnv)
 }
 
 var (
-	raft      *Raft     // raft 实例
-	once      sync.Once // once 确保Raft的启动方法只会被调用一次
-	timeCheck int64     // raft心跳定时检查超时时间
-	timeout   int64     // raft心跳定时/超时ms
-	port      string    // raft服务开放端口号，默认19877
+	raft           *Raft     // raft 实例
+	once           sync.Once // once 确保Raft的启动方法只会被调用一次
+	timeCheck      int64     // raft心跳定时检查超时时间
+	timeout        int64     // raft心跳定时/超时ms
+	port           string    // raft服务开放端口号，默认19877
+	logFileDir     string    // 日志文件目录
+	logFileMaxSize int       // 每个日志文件保存的最大尺寸 单位：M
+	logFileMaxAge  int       // 文件最多保存多少天
+	logUtc         bool      // CST & UTC 时间
+	logLevel       string    // 日志级别(debugLevel/infoLevel/warnLevel/ErrorLevel/panicLevel/fatalLevel)
+	logProduction  bool      // 是否生产环境，在生产环境下控制台不会输出任何日志
 )
+
+type Params struct {
+	Node         *Node   // 自身节点信息
+	Nodes        []*Node // 集群节点信息
+	TimeCheckReq int64   //  raft心跳定时检查超时时间
+	TimeoutReq   int64   // raft心跳定时/超时ms
+	PortReq      string  // raft服务开放端口号，默认19877
+	Log          *Log    // 日志
+}
+
+type Log struct {
+	Dir         string // 日志文件目录
+	FileMaxSize int    // 每个日志文件保存的最大尺寸 单位：M
+	FileMaxAge  int    // 文件最多保存多少天
+	Utc         bool   // CST & UTC 时间
+	Level       string // 日志级别(debug/info/warn/error/panic/fatal)
+	Production  bool   // 是否生产环境，在生产环境下控制台不会输出任何日志
+}
+
+func initLog(log *Log) error {
+	logLevel = "debug"
+	if nil != log {
+		if gnomon.String().IsNotEmpty(log.Dir) {
+			logFileDir = log.Dir
+		}
+		if log.FileMaxSize > 0 {
+			logFileMaxSize = log.FileMaxSize
+		}
+		if log.FileMaxAge > 0 {
+			logFileMaxAge = log.FileMaxAge
+		}
+		logUtc = log.Utc
+		logProduction = log.Production
+		logLevel = log.Level
+	}
+	if err := gnomon.Log().Init(logFileDir, logFileMaxSize, logFileMaxAge, logUtc); nil != err {
+		return err
+	}
+	var level gnomon.Level
+	switch strings.ToLower(logLevel) {
+	case "debug":
+		level = gnomon.Log().DebugLevel()
+	case "info":
+		level = gnomon.Log().InfoLevel()
+	case "warn":
+		level = gnomon.Log().WarnLevel()
+	case "error":
+		level = gnomon.Log().ErrorLevel()
+	case "panic":
+		level = gnomon.Log().PanicLevel()
+	case "fatal":
+		level = gnomon.Log().FatalLevel()
+	default:
+		level = gnomon.Log().DebugLevel()
+	}
+	gnomon.Log().Set(level, logProduction)
+	return nil
+}
 
 func gRPCListener() {
 	var (
@@ -84,6 +162,10 @@ func gRPCListener() {
 // RaftStart 启动且只能启动一次Raft服务
 func RaftStart() {
 	gnomon.Log().Info("raft", gnomon.Log().Field("new", "new instance raft"))
+	if err := initLog(nil); nil != err {
+		gnomon.Log().Error("raft", gnomon.Log().Err(err))
+		return
+	}
 	once.Do(func() {
 		go gRPCListener()
 		raft = &Raft{}
@@ -100,21 +182,25 @@ func RaftStart() {
 // timeCheck  raft心跳定时检查超时时间
 //
 // timeout raft心跳定时/超时ms
-func RaftStartWithParams(node *Node, nodes []*Node, timeCheckReq, timeoutReq int64, portReq string) {
-	if timeCheckReq != 0 {
-		timeCheck = timeCheckReq
+func RaftStartWithParams(params *Params) {
+	if params.TimeCheckReq != 0 {
+		timeCheck = params.TimeCheckReq
 	}
-	if timeoutReq != 0 {
-		timeout = timeoutReq
+	if params.TimeoutReq != 0 {
+		timeout = params.TimeoutReq
 	}
-	if gnomon.String().IsNotEmpty(portReq) {
-		port = portReq
+	if gnomon.String().IsNotEmpty(params.PortReq) {
+		port = params.PortReq
 	}
 	gnomon.Log().Info("raft", gnomon.Log().Field("new", "new instance raft"))
+	if err := initLog(params.Log); nil != err {
+		gnomon.Log().Error("raft", gnomon.Log().Err(err))
+		return
+	}
 	once.Do(func() {
 		go gRPCListener()
 		raft = &Raft{}
-		raft.startWithParams(node, nodes)
+		raft.startWithParams(params.Node, params.Nodes)
 	})
 }
 

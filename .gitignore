@@ -22,3 +22,5 @@ gen### Go template
 *.out
 .vscode
 .DS_Store
+!/tmp/
+tmp

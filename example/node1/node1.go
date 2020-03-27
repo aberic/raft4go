@@ -46,7 +46,21 @@ func main() {
 		{Id: "2", Url: "127.0.0.1:19878"},
 		{Id: "3", Url: "127.0.0.1:19879"},
 	}
-	raft4go.RaftStartWithParams(node, nodes, 0, 0, "19877")
+	raft4go.RaftStartWithParams(&raft4go.Params{
+		Node:         node,
+		Nodes:        nodes,
+		TimeCheckReq: 0,
+		TimeoutReq:   0,
+		PortReq:      "19877",
+		Log: &raft4go.Log{
+			Dir:         "tmp/log",
+			FileMaxSize: 1,
+			FileMaxAge:  1,
+			Utc:         true,
+			Level:       "debug",
+			Production:  false,
+		},
+	})
 
 	mux := http.NewServeMux()
 	mux.Handle("/", &myHandler{})
