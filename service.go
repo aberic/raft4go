@@ -25,6 +25,7 @@ func reqHeartbeat(ctx context.Context, node *nodal, in *ReqHeartBeat) {
 	var resultChan = make(chan struct{})
 	go func() {
 		if _, err := rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
+			defer func() { _ = node.pool.Release(conn) }()
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -47,7 +48,7 @@ func reqHeartbeat(ctx context.Context, node *nodal, in *ReqHeartBeat) {
 }
 
 // reqNodeList 请求集群节点集合
-func reqNodeList(ctx context.Context, url string, in *ReqNodeList) ([]*Node, error) {
+func reqNodeList(ctx context.Context, node *nodal, in *ReqNodeList) ([]*Node, error) {
 	var (
 		resultChan = make(chan []*Node)
 		errChan    = make(chan error)
@@ -57,7 +58,8 @@ func reqNodeList(ctx context.Context, url string, in *ReqNodeList) ([]*Node, err
 			resp interface{}
 			err  error
 		)
-		resp, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
+			defer func() { _ = node.pool.Release(conn) }()
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -84,7 +86,7 @@ func reqNodeList(ctx context.Context, url string, in *ReqNodeList) ([]*Node, err
 }
 
 // reqDataList 请求集群数据集合
-func reqDataList(ctx context.Context, url string, in *ReqDataList) ([]*Data, error) {
+func reqDataList(ctx context.Context, node *nodal, in *ReqDataList) ([]*Data, error) {
 	var (
 		resultChan = make(chan []*Data)
 		errChan    = make(chan error)
@@ -94,7 +96,8 @@ func reqDataList(ctx context.Context, url string, in *ReqDataList) ([]*Data, err
 			resp interface{}
 			err  error
 		)
-		resp, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
+			defer func() { _ = node.pool.Release(conn) }()
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -121,7 +124,7 @@ func reqDataList(ctx context.Context, url string, in *ReqDataList) ([]*Data, err
 }
 
 // reqData 请求当前集群指定key数据
-func reqData(ctx context.Context, url string, in *ReqData) ([]byte, error) {
+func reqData(ctx context.Context, node *nodal, in *ReqData) ([]byte, error) {
 	var (
 		resultChan = make(chan []byte)
 		errChan    = make(chan error)
@@ -131,7 +134,8 @@ func reqData(ctx context.Context, url string, in *ReqData) ([]byte, error) {
 			resp interface{}
 			err  error
 		)
-		resp, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
+			defer func() { _ = node.pool.Release(conn) }()
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -158,7 +162,7 @@ func reqData(ctx context.Context, url string, in *ReqData) ([]byte, error) {
 }
 
 // reqSyncData 同步数据
-func reqSyncData(ctx context.Context, url string, in *ReqSyncData) error {
+func reqSyncData(ctx context.Context, node *nodal, in *ReqSyncData) error {
 	var (
 		resultChan = make(chan struct{})
 		errChan    = make(chan error)
@@ -167,7 +171,14 @@ func reqSyncData(ctx context.Context, url string, in *ReqSyncData) error {
 		var (
 			err error
 		)
-		_, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		//_, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		//	// 创建grpc客户端
+		//	cli := NewRaftClient(conn)
+		//	//客户端向grpc服务端发起请求
+		//	return cli.SyncData(context.Background(), in)
+		//})
+		_, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
+			defer func() { _ = node.pool.Release(conn) }()
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -205,6 +216,7 @@ func reqVote(ctx context.Context, node *nodal, in *ReqVote) bool {
 			err  error
 		)
 		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
+			defer func() { _ = node.pool.Release(conn) }()
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求

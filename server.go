@@ -30,6 +30,9 @@ func (s *Server) Heartbeat(ctx context.Context, req *ReqHeartBeat) (resp *RespHe
 		port int
 	)
 	gnomon.Log().Debug("raft", gnomon.Log().Field("receive heartbeat", req))
+	if _, ok := raft.persistence.nodes[req.Id]; !ok {
+		raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
+	}
 	if addr, port, err = getGRPCClientIP(ctx); nil != err {
 		return
 	}
@@ -63,15 +66,9 @@ func (s *Server) NodeList(_ context.Context, req *ReqNodeList) (resp *RespNodeLi
 		}
 	}
 
-	for _, nodeReq := range req.Nodes {
-		have := false
-		for _, nodeLocal := range raft.persistence.nodes {
-			if nodeReq.Id == nodeLocal.Id {
-				have = true
-			}
-		}
-		if !have {
-			raft.persistence.appendNode(nodeReq)
+	for _, node := range req.Nodes {
+		if _, ok := raft.persistence.nodes[node.Id]; !ok {
+			raft.persistence.appendNode(node)
 		}
 	}
 
@@ -106,26 +103,19 @@ func (s *Server) SyncData(_ context.Context, req *ReqSyncData) (resp *RespSyncDa
 
 // Vote 接收发起选举，索要选票
 func (s *Server) Vote(_ context.Context, req *ReqVote) (resp *RespVote, err error) {
-	haveNode := false
-	for _, node := range raft.persistence.nodes {
-		if node.Id == req.Id {
-			if node.Url != req.Url {
-				errStr := fmt.Sprintf(
-					"cluster info error, now vote, req.id is %s, have.id is %s, req.url is %s, have.url is %s",
-					req.Id, node.Id, req.Url, node.Url)
-				return &RespVote{VoteGranted: false}, errors.New(errStr)
-			}
-			haveNode = true
+	gnomon.Log().Info("raft", gnomon.Log().Field("vote", *req))
+	if node, ok := raft.persistence.nodes[req.Id]; ok {
+		if node.Url != req.Url {
+			errStr := fmt.Sprintf(
+				"cluster info error, now vote, req.id is %s, have.id is %s, req.url is %s, have.url is %s",
+				req.Id, node.Id, req.Url, node.Url)
+			return &RespVote{VoteGranted: false}, errors.New(errStr)
 		}
-	}
-	if !haveNode {
+	} else {
 		raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
 	}
-	if req.Term > raft.persistence.term {
-		raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp)
-		return &RespVote{VoteGranted: true}, nil
-	} else if req.Term == raft.persistence.term {
-		raft.role.vote(req)
+	if voteGranted, err := raft.role.vote(req); !voteGranted {
+		return &RespVote{VoteGranted: false}, err
 	}
-	return &RespVote{VoteGranted: false}, fmt.Errorf("term %v less-than %v", req.Term, raft.persistence.term)
+	return &RespVote{VoteGranted: true}, nil
 }

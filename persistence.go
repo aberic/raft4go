@@ -26,23 +26,40 @@ type votedFor struct {
 	id        string // 在当前获得选票的候选人的 Id
 	term      int32  // 在当前获得选票的候选人的任期
 	timestamp int64  // 在当前获取选票的候选人时间戳
+	lock      sync.Mutex
 }
 
-func (v *votedFor) set(id string, term int32, timestamp int64) {
-	v.id = id
-	v.term = term
-	v.timestamp = timestamp
+// set 投票设置成功与否
+func (v *votedFor) set(id string, term int32, timestamp int64) bool {
+	defer v.lock.Unlock()
+	v.lock.Lock()
+	if v.term < term {
+		v.id = id
+		v.term = term
+		v.timestamp = timestamp
+		return true
+	} else if v.term == term {
+		if v.timestamp > timestamp {
+			v.id = id
+			v.timestamp = timestamp
+			return true
+		} else if v.timestamp == timestamp {
+			v.id = id
+			return true
+		}
+	}
+	return false
 }
 
 // persistence 所有角色都拥有的持久化的状态（在响应RPC请求之前变更且持久化的状态）
 type persistence struct {
-	leader    *nodal       // 当前任务Leader
-	term      int32        // 服务器的任期，初始为0，递增
-	node      *nodal       // 自身节点信息
-	nodes     []*nodal     // 当前Raft可见节点集合
-	nodesLock sync.RWMutex // 当前Raft可见节点集合锁
-	votedFor  *votedFor    // 在当前获得选票的候选人的 Id
-	data      *data        // raft数据内容
+	leader    *nodal            // 当前任务Leader
+	term      int32             // 服务器的任期，初始为0，递增
+	node      *nodal            // 自身节点信息
+	nodes     map[string]*nodal // 当前Raft可见节点集合
+	nodesLock sync.RWMutex      // 当前Raft可见节点集合锁
+	votedFor  *votedFor         // 在当前获得选票的候选人的 Id
+	data      *data             // raft数据内容
 }
 
 func (p *persistence) setLeader(id, url string) {
@@ -53,21 +70,25 @@ func (p *persistence) setLeader(id, url string) {
 func (p *persistence) appendNode(node *Node) {
 	defer p.nodesLock.Unlock()
 	p.nodesLock.Lock()
+	if _, ok := p.nodes[node.Id]; ok {
+		return
+	}
 	if nodal, err := newNode(node.Id, node.Url); nil == err {
-		p.nodes = append(p.nodes, nodal)
+		p.nodes[node.Id] = nodal
 	}
 }
 
 func (p *persistence) appendNodes(nodeList []*Node) {
 	defer p.nodesLock.Unlock()
 	p.nodesLock.Lock()
-	var nodalList []*nodal
 	for _, node := range nodeList {
+		if _, ok := p.nodes[node.Id]; ok {
+			return
+		}
 		if nodal, err := newNode(node.Id, node.Url); nil == err {
-			nodalList = append(nodalList, nodal)
+			p.nodes[node.Id] = nodal
 		}
 	}
-	p.nodes = append(p.nodes, nodalList...)
 }
 
 func (p *persistence) Nodes() []*Node {

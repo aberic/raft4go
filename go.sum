@@ -1,7 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/aberic/gnomon v0.0.0-20200327160640-0acbbd3af61f h1:0QrqXpKdvlIpRb+TVvss2PRhROlK7VYsAx3tJS0r5o0=
-github.com/aberic/gnomon v0.0.0-20200327160640-0acbbd3af61f/go.mod h1:7v3OA1Yoou8VSadkKEEJIt5jNINswT5KfuHrCTlumCY=
+github.com/aberic/gnomon v0.0.0-20200329161032-b89ca7d409a4 h1:q1S8nHNVHfcKrsVil0z0pjurmTpKDGWbKZMQn7KcPL8=
+github.com/aberic/gnomon v0.0.0-20200329161032-b89ca7d409a4/go.mod h1:7v3OA1Yoou8VSadkKEEJIt5jNINswT5KfuHrCTlumCY=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3 h1:A/EVblehb75cUgXA5njHPn0kLAsykn6mJGz7rnmW5W0=
 github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3/go.mod h1:3J08xEfcugPacsc34/LKRU2yO7YmuT8yt28J8k2+rrI=

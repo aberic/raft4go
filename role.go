@@ -35,7 +35,7 @@ type role interface {
 	// syncData 请求同步数据
 	syncData(req *ReqSyncData) error
 	// vote 接收请求投票数据
-	vote(req *ReqVote) bool
+	vote(req *ReqVote) (bool, error)
 	// roleStatus 获取角色状态，0-leader、1-candidate、2-follower
 	roleStatus() RoleStatus
 }

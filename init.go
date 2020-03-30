@@ -43,8 +43,9 @@ const (
 	brokerID          = "RAFT_BROKER_ID"         // BROKER_ID=1
 	nodeAddr          = "RAFT_NODE_ADDRESS"      // NODE_ADDRESS=example.com NODE_ADDRESS=127.0.0.1:19865:19877
 	cluster           = "RAFT_CLUSTER"           // CLUSTER=1=127.0.0.1:19865:19877,2=127.0.0.2:19865:19877,3=127.0.0.3:19865:19877
-	timeCheckEnv      = "RAFT_TIME_CHECK"        // raft心跳定时检查超时时间
-	timeoutEnv        = "RAFT_TIMEOUT"           // raft心跳定时/超时ms
+	timeHeartbeatEnv  = "RAFT_TIME_HEARTBEAT"    // raft心跳定时时间ms
+	timeCheckEnv      = "RAFT_TIME_CHECK"        // raft心跳定时检查超时时间ms
+	timeoutEnv        = "RAFT_TIMEOUT"           // raft心跳超时ms
 	portEnv           = "RAFT_PORT"              // raft服务开放端口号，默认19877
 	logDirEnv         = "RAFT_LOG_DIR"           // 日志文件目录
 	logFileMaxSizeEnv = "RAFT_LOG_FILE_MAX_SIZE" // 每个日志文件保存的最大尺寸 单位：M
@@ -55,8 +56,9 @@ const (
 )
 
 func init() {
-	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 1000)
-	timeout = gnomon.Env().GetInt64D(timeoutEnv, 1500)
+	timeHeartbeat = gnomon.Env().GetInt64D(timeHeartbeatEnv, 1000)
+	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 1500)
+	timeout = gnomon.Env().GetInt64D(timeoutEnv, 2000)
 	port = gnomon.Env().GetD(portEnv, "19877")
 	logFileDir = gnomon.Env().GetD(logDirEnv, os.TempDir())
 	logFileMaxSize = gnomon.Env().GetIntD(logFileMaxSizeEnv, 1024)
@@ -69,8 +71,9 @@ func init() {
 var (
 	raft           *Raft     // raft 实例
 	once           sync.Once // once 确保Raft的启动方法只会被调用一次
+	timeHeartbeat  int64     // raft心跳定时ms
 	timeCheck      int64     // raft心跳定时检查超时时间
-	timeout        int64     // raft心跳定时/超时ms
+	timeout        int64     // raft心跳超时ms
 	port           string    // raft服务开放端口号，默认19877
 	logFileDir     string    // 日志文件目录
 	logFileMaxSize int       // 每个日志文件保存的最大尺寸 单位：M
@@ -81,12 +84,13 @@ var (
 )
 
 type Params struct {
-	Node         *Node   // 自身节点信息
-	Nodes        []*Node // 集群节点信息
-	TimeCheckReq int64   //  raft心跳定时检查超时时间
-	TimeoutReq   int64   // raft心跳定时/超时ms
-	PortReq      string  // raft服务开放端口号，默认19877
-	Log          *Log    // 日志
+	Node          *Node   // 自身节点信息
+	Nodes         []*Node // 集群节点信息
+	TimeHeartbeat int64   // raft心跳定时ms
+	TimeCheckReq  int64   //  raft心跳定时检查超时时间ms
+	TimeoutReq    int64   // raft心跳定时ms
+	PortReq       string  // raft服务开放端口号，默认19877
+	Log           *Log    // 日志
 }
 
 type Log struct {
@@ -183,6 +187,9 @@ func RaftStart() {
 //
 // timeout raft心跳定时/超时ms
 func RaftStartWithParams(params *Params) {
+	if params.TimeHeartbeat != 0 {
+		timeHeartbeat = params.TimeHeartbeat
+	}
 	if params.TimeCheckReq != 0 {
 		timeCheck = params.TimeCheckReq
 	}
@@ -222,6 +229,8 @@ func Get(key string) ([]byte, error) {
 }
 
 // NodeList 查看当前集群中节点集合，包括自身
-func NodeList() []*nodal {
-	return append(raft.persistence.nodes, raft.persistence.node)
+func NodeList() map[string]*nodal {
+	nodalList := raft.persistence.nodes
+	nodalList[raft.persistence.node.Id] = raft.persistence.node
+	return nodalList
 }

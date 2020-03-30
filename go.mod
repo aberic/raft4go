@@ -3,7 +3,7 @@ module github.com/aberic/raft4go
 go 1.13
 
 require (
-	github.com/aberic/gnomon v0.0.0-20200327160640-0acbbd3af61f
+	github.com/aberic/gnomon v0.0.0-20200329161032-b89ca7d409a4
 	github.com/golang/protobuf v1.3.5
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/sys v0.0.0-20200317113312-5766fd39f98d // indirect

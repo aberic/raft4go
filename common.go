@@ -52,8 +52,6 @@ func rpcPool(pool *gnomon.Pond, business func(conn *grpc.ClientConn) (interface{
 		return nil, err
 	}
 	conn = c.(*grpc.ClientConn)
-	// 请求完毕后关闭连接
-	defer func() { _ = conn.Close() }()
 	return business(conn)
 }
 

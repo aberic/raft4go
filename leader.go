@@ -49,17 +49,11 @@ func (l *leader) update(hb *heartBeat) {
 	} else if hb.Term > raft.persistence.term { // 当前任期小于对方节点，自身变成跟随节点
 		raft.tuneFollower(hb)
 	} else { // 当前任期大于对方节点，检查对方节点是否被标记成无效节点
-		haveThisNode := false // 假设节点集群中不存在该节点
-		for _, node := range raft.persistence.nodes {
-			if node.Id == hb.Id {
-				haveThisNode = true
-				if node.UnusualTimes >= 3 { // 如果该节点的无效次数大于等于3，重置该节点有效性
-					node.UnusualTimes = 0
-				}
-				break
+		if node, ok := raft.persistence.nodes[hb.Id]; ok {
+			if node.UnusualTimes >= 3 { // 如果该节点的无效次数大于等于3，重置该节点有效性
+				node.UnusualTimes = 0
 			}
-		}
-		if !haveThisNode { // 如果本地集群无此节点，则新增该节点，后续心跳会发送至该节点
+		} else { // 如果本地集群无此节点，则新增该节点，后续心跳会发送至该节点
 			raft.persistence.appendNode(&Node{
 				Id:           hb.Id,
 				Url:          hb.Url,
@@ -97,7 +91,7 @@ func (l *leader) put(key string, value []byte) error {
 	// todo 流程待正规化
 	for _, node := range raft.persistence.nodes {
 		go func() {
-			_ = reqSyncData(context.Background(), node.Url, &ReqSyncData{
+			_ = reqSyncData(context.Background(), node, &ReqSyncData{
 				Term:      raft.persistence.term,
 				LeaderId:  raft.persistence.node.Id,
 				LeaderUrl: raft.persistence.node.Url,
@@ -129,8 +123,15 @@ func (l *leader) syncData(req *ReqSyncData) error {
 }
 
 // vote 接收请求投票数据
-func (l *leader) vote(_ *ReqVote) bool {
-	return false
+func (l *leader) vote(req *ReqVote) (bool, error) {
+	if req.Term >= raft.persistence.term {
+		if raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp) {
+			return true, nil
+		}
+		return false, fmt.Errorf("term %v less-than %v, or timestamp %v less-than %v",
+			req.Term, raft.persistence.votedFor.term, req.Timestamp, raft.persistence.votedFor.timestamp)
+	}
+	return false, fmt.Errorf("term %v less-than %v", req.Term, raft.persistence.votedFor.term)
 }
 
 // roleStatus 获取角色状态
@@ -140,19 +141,22 @@ func (l *leader) roleStatus() RoleStatus {
 
 // heartbeats 向节点集合发送心跳
 func (l *leader) heartbeats() {
-	l.scheduled.Reset(time.Millisecond * time.Duration(timeout))
+	l.scheduled.Reset(time.Millisecond * time.Duration(timeHeartbeat))
 	for {
 		select {
 		case <-l.scheduled.C:
 			in := &ReqHeartBeat{
 				Term: raft.persistence.term,
 				Id:   raft.persistence.node.Id,
+				Url:  raft.persistence.node.Url,
 				Hash: raft.persistence.data.hash,
 			}
+			raft.persistence.nodesLock.RLock()
 			for _, node := range raft.persistence.nodes {
 				go reqHeartbeat(l.ctx, node, in)
 			}
-			l.scheduled.Reset(time.Millisecond * time.Duration(timeout))
+			raft.persistence.nodesLock.RUnlock()
+			l.scheduled.Reset(time.Millisecond * time.Duration(timeHeartbeat))
 		case <-l.stop:
 			return
 		}

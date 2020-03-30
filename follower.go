@@ -45,19 +45,53 @@ func (f *follower) start() {
 
 // update 更新状态
 func (f *follower) update(hb *heartBeat) {
-	// 任期相同，并且leader节点也匹配
-	if hb.Term == raft.persistence.term && hb.Id == raft.persistence.leader.Id {
-		f.refreshTime()
-		if !f.synced {
-			f.sync(hb)
+	// leader节点匹配
+	if hb.Id == raft.persistence.leader.Id {
+		if hb.Term == raft.persistence.term { // 任期相同
+			f.refreshTime()
+			if !f.synced {
+				f.sync(hb)
+			}
+			// leader节点数据hash发生变更
+			if hb.Hash != raft.persistence.data.hash {
+				f.refreshTime()
+				f.synced = false
+				f.sync(hb)
+			}
+		} else if hb.Term > raft.persistence.term {
+			f.refreshTime()
+			// leader节点数据hash发生变更
+			if hb.Hash != raft.persistence.data.hash {
+				f.synced = false
+				f.sync(hb)
+			} else {
+				raft.persistence.term = hb.Term
+			}
 		}
-		// leader节点数据hash发生变更
-		if hb.Hash != raft.persistence.data.hash {
-			f.sync(hb)
+	} else { // 心跳节点与当前期望leader节点不匹配
+		// 判断当前心跳节点是否存在与节点集群，如不存在，则新加
+		if node, ok := raft.persistence.nodes[hb.Id]; ok {
+			if hb.Url != node.Url {
+				gnomon.Log().Warn("raft", gnomon.Log().Field("heartbeat", "same id with different url"),
+					gnomon.Log().Field("hb.id", hb.Id), gnomon.Log().Field("hb.url", hb.Url),
+					gnomon.Log().Field("node.id", node.Id), gnomon.Log().Field("node.url", node.Url))
+				return
+			}
+		} else {
+			raft.persistence.appendNode(&Node{Id: hb.Id, Url: hb.Url, UnusualTimes: 0})
 		}
-	} else if hb.Term > raft.persistence.term {
-		f.refreshTime()
-		f.sync(hb)
+		// 如果心跳节点的任期大于当前期望节点任期，尝试重新同步数据
+		if hb.Term > raft.persistence.term {
+			f.refreshTime()
+			// leader节点数据hash发生变更
+			if hb.Hash != raft.persistence.data.hash {
+				f.synced = false
+				f.sync(hb)
+			} else {
+				raft.persistence.setLeader(hb.Id, hb.Url)
+				raft.persistence.term = hb.Term
+			}
+		}
 	}
 }
 
@@ -77,7 +111,7 @@ func (f *follower) put(key string, value []byte) error {
 	if nil == value {
 		return errors.New("value can't be nil")
 	}
-	return reqSyncData(context.Background(), raft.persistence.leader.Url, &ReqSyncData{
+	return reqSyncData(context.Background(), raft.persistence.leader, &ReqSyncData{
 		Term:      raft.persistence.term,
 		LeaderId:  raft.persistence.leader.Id,
 		LeaderUrl: raft.persistence.leader.Url,
@@ -99,8 +133,15 @@ func (f *follower) syncData(req *ReqSyncData) error {
 }
 
 // vote 接收请求投票数据
-func (f *follower) vote(_ *ReqVote) bool {
-	return false
+func (f *follower) vote(req *ReqVote) (bool, error) {
+	if req.Term >= raft.persistence.term {
+		if raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp) {
+			return true, nil
+		}
+		return false, fmt.Errorf("term %v less-than %v, or timestamp %v less-than %v",
+			req.Term, raft.persistence.votedFor.term, req.Timestamp, raft.persistence.votedFor.timestamp)
+	}
+	return false, fmt.Errorf("term %v less-than %v", req.Term, raft.persistence.votedFor.term)
 }
 
 // roleStatus 获取角色状态
@@ -124,6 +165,7 @@ func (f *follower) checkTimeOut() {
 		select {
 		case <-f.scheduled.C:
 			if time.Now().UnixNano()/1e6-f.time > timeout {
+				gnomon.Log().Info("raft", gnomon.Log().Field("heartbeat", "timeout"))
 				raft.tuneCandidate()
 			} else {
 				f.scheduled.Reset(time.Millisecond * time.Duration(timeCheck))
@@ -169,7 +211,7 @@ func (f *follower) syncCheck(hb *heartBeat) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		nodeList, err := reqNodeList(ctx, hb.Url, &ReqNodeList{Nodes: raft.persistence.Nodes()})
+		nodeList, err := reqNodeList(ctx, raft.persistence.nodes[hb.Id], &ReqNodeList{Nodes: raft.persistence.Nodes()})
 		if err != nil {
 			cancel()
 		} else {
@@ -181,11 +223,11 @@ func (f *follower) syncCheck(hb *heartBeat) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			dataList, err := reqDataList(ctx, hb.Url, &ReqDataList{})
+			dataList, err := reqDataList(ctx, raft.persistence.nodes[hb.Id], &ReqDataList{})
 			if err != nil {
 				cancel()
 			} else {
-				f.compareAndSwap(hb, hb.Url, dataList)
+				f.compareAndSwap(hb, dataList)
 			}
 		}()
 	}
@@ -193,7 +235,7 @@ func (f *follower) syncCheck(hb *heartBeat) {
 }
 
 // sync 与leader比较数据并更新数据
-func (f *follower) compareAndSwap(hb *heartBeat, url string, dataList []*Data) {
+func (f *follower) compareAndSwap(hb *heartBeat, dataList []*Data) {
 	// 同步数据等相关操作
 	errStruct := make(chan struct{}, len(dataList))
 	ctx, cancel := context.WithCancel(context.Background())
@@ -204,7 +246,7 @@ func (f *follower) compareAndSwap(hb *heartBeat, url string, dataList []*Data) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				bytes, err := reqData(ctx, url, &ReqData{Key: data.Key})
+				bytes, err := reqData(ctx, raft.persistence.nodes[hb.Id], &ReqData{Key: data.Key})
 				if err != nil {
 					errStruct <- struct{}{}
 					cancel()
@@ -218,7 +260,7 @@ func (f *follower) compareAndSwap(hb *heartBeat, url string, dataList []*Data) {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					bytes, err := reqData(ctx, url, &ReqData{Key: data.Key})
+					bytes, err := reqData(ctx, raft.persistence.nodes[hb.Id], &ReqData{Key: data.Key})
 					if err != nil {
 						errStruct <- struct{}{}
 						cancel()
@@ -230,7 +272,7 @@ func (f *follower) compareAndSwap(hb *heartBeat, url string, dataList []*Data) {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					if err := reqSyncData(ctx, url, &ReqSyncData{
+					if err := reqSyncData(ctx, raft.persistence.nodes[hb.Id], &ReqSyncData{
 						Term:      raft.persistence.term,
 						LeaderId:  raft.persistence.leader.Id,
 						LeaderUrl: raft.persistence.leader.Url,

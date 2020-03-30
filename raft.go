@@ -71,7 +71,7 @@ func (r *Raft) init() {
 		leader: &nodal{},
 		term:   0,
 		node:   &nodal{},
-		nodes:  []*nodal{},
+		nodes:  map[string]*nodal{},
 		votedFor: &votedFor{
 			id:        "",
 			term:      0,

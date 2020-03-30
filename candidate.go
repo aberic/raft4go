@@ -17,6 +17,7 @@ package raft4go
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/aberic/gnomon"
 	"strconv"
 	"sync"
@@ -36,6 +37,7 @@ func (c *candidate) start() {
 	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "start"), gnomon.Log().Field("term", raft.persistence.term))
 	c.base.setStatus(RoleStatusCandidate)
 	c.timestamp = time.Now().UnixNano()
+	_ = raft.persistence.votedFor.set(raft.persistence.node.Id, raft.persistence.term+1, c.timestamp)
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	go c.votes()
 }
@@ -69,11 +71,9 @@ func (c *candidate) put(key string, value []byte) error {
 // syncData 请求同步数据
 func (c *candidate) syncData(req *ReqSyncData) error {
 	if req.Term >= raft.persistence.term { // 如果请求任期大于等于自身任期，则可能终止当前候选身份
-		for _, node := range raft.persistence.nodes {
-			if node.Id == req.LeaderId { // 如果请求leaderID存在于集群中，则自身变为follower节点
-				raft.tuneFollower(nil)
-				return nil
-			}
+		if _, ok := raft.persistence.nodes[req.LeaderId]; ok { // 如果请求leaderID存在于集群中，则自身变为follower节点
+			raft.tuneFollower(nil)
+			return nil
 		}
 		// 没有结束，则表示该请求同步的leader节点为新发现节点
 		raft.persistence.appendNode(&Node{Id: req.LeaderId, Url: req.LeaderUrl, UnusualTimes: 0})
@@ -85,13 +85,16 @@ func (c *candidate) syncData(req *ReqSyncData) error {
 }
 
 // vote 接收请求投票数据
-func (c *candidate) vote(req *ReqVote) bool {
-	if req.Timestamp < c.timestamp {
-		raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp)
-		raft.tuneFollower(nil)
-		return true
+func (c *candidate) vote(req *ReqVote) (bool, error) {
+	if req.Term >= raft.persistence.term {
+		if raft.persistence.votedFor.set(req.Id, req.Term, req.Timestamp) {
+			raft.tuneFollower(nil)
+			return true, nil
+		}
+		return false, fmt.Errorf("term %v less-than %v, or timestamp %v less-than %v",
+			req.Term, raft.persistence.votedFor.term, req.Timestamp, raft.persistence.votedFor.timestamp)
 	}
-	return false
+	return false, fmt.Errorf("term %v less-than %v", req.Term, raft.persistence.votedFor.term)
 }
 
 // roleStatus 获取角色状态

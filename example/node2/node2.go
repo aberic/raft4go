@@ -44,19 +44,20 @@ func main() {
 	node := &raft4go.Node{Id: "2", Url: "127.0.0.1:19878"}
 	nodes := []*raft4go.Node{
 		{Id: "1", Url: "127.0.0.1:19877"},
-		{Id: "3", Url: "127.0.0.1:19879"},
+		//{Id: "3", Url: "127.0.0.1:19879"},
 	}
 	raft4go.RaftStartWithParams(&raft4go.Params{
-		Node:         node,
-		Nodes:        nodes,
-		TimeCheckReq: 0,
-		TimeoutReq:   0,
-		PortReq:      "19878",
+		Node:          node,
+		Nodes:         nodes,
+		TimeHeartbeat: 0,
+		TimeCheckReq:  0,
+		TimeoutReq:    0,
+		PortReq:       "19878",
 		Log: &raft4go.Log{
 			Dir:         "tmp/log",
 			FileMaxSize: 1,
 			FileMaxAge:  1,
-			Utc:         true,
+			Utc:         false,
 			Level:       "debug",
 			Production:  false,
 		},
