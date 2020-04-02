@@ -33,7 +33,7 @@ func (s *Server) Heartbeat(ctx context.Context, req *ReqHeartBeat) (resp *RespHe
 	if _, ok := raft.persistence.nodes[req.Id]; !ok {
 		raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
 	}
-	if addr, port, err = getGRPCClientIP(ctx); nil != err {
+	if addr, port, err = gnomon.GRPC().GetClientIP(ctx); nil != err {
 		return
 	}
 	resp = &RespHeartBeat{}

@@ -24,8 +24,7 @@ import (
 func reqHeartbeat(ctx context.Context, node *nodal, in *ReqHeartBeat) {
 	var resultChan = make(chan struct{})
 	go func() {
-		if _, err := rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
-			defer func() { _ = node.pool.Release(conn) }()
+		if _, err := gnomon.GRPC().RequestPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -58,8 +57,7 @@ func reqNodeList(ctx context.Context, node *nodal, in *ReqNodeList) ([]*Node, er
 			resp interface{}
 			err  error
 		)
-		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
-			defer func() { _ = node.pool.Release(conn) }()
+		resp, err = gnomon.GRPC().RequestPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -96,8 +94,7 @@ func reqDataList(ctx context.Context, node *nodal, in *ReqDataList) ([]*Data, er
 			resp interface{}
 			err  error
 		)
-		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
-			defer func() { _ = node.pool.Release(conn) }()
+		resp, err = gnomon.GRPC().RequestPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -134,8 +131,7 @@ func reqData(ctx context.Context, node *nodal, in *ReqData) ([]byte, error) {
 			resp interface{}
 			err  error
 		)
-		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
-			defer func() { _ = node.pool.Release(conn) }()
+		resp, err = gnomon.GRPC().RequestPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -177,8 +173,7 @@ func reqSyncData(ctx context.Context, node *nodal, in *ReqSyncData) error {
 		//	//客户端向grpc服务端发起请求
 		//	return cli.SyncData(context.Background(), in)
 		//})
-		_, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
-			defer func() { _ = node.pool.Release(conn) }()
+		_, err = gnomon.GRPC().RequestPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求
@@ -215,8 +210,7 @@ func reqVote(ctx context.Context, node *nodal, in *ReqVote) bool {
 			resp interface{}
 			err  error
 		)
-		resp, err = rpcPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
-			defer func() { _ = node.pool.Release(conn) }()
+		resp, err = gnomon.GRPC().RequestPool(node.pool, func(conn *grpc.ClientConn) (interface{}, error) {
 			// 创建grpc客户端
 			cli := NewRaftClient(conn)
 			//客户端向grpc服务端发起请求

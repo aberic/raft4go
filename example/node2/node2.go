@@ -15,30 +15,11 @@
 package main
 
 import (
+	"github.com/aberic/gnomon"
+	"github.com/aberic/gnomon/grope"
 	"github.com/aberic/raft4go"
-	"log"
 	"net/http"
-	"time"
 )
-
-type myHandler struct{}
-
-func (*myHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("this is version 3"))
-}
-
-func sayHello(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("hello"))
-}
-
-func sayBye(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-
-	}
-	// 睡眠4秒  上面配置了3秒写超时，所以访问 “/bye“路由会出现没有响应的现象
-	time.Sleep(4 * time.Second)
-	w.Write([]byte("bye bye ,this is v3 httpServer"))
-}
 
 func main() {
 	node := &raft4go.Node{Id: "2", Url: "127.0.0.1:19878"}
@@ -63,15 +44,42 @@ func main() {
 		},
 	})
 
-	mux := http.NewServeMux()
-	mux.Handle("/", &myHandler{})
-	mux.HandleFunc("/hi", sayHello)
-	mux.HandleFunc("/bye", sayBye)
+	httpServe := gnomon.Grope().NewHttpServe()
+	router(httpServe)
+	gnomon.Grope().ListenAndServe(":8081", httpServe)
+}
 
-	server := &http.Server{
-		Addr:         ":8081",
-		WriteTimeout: time.Second * 3, //设置3秒的写超时
-		Handler:      mux,
+func router(hs *grope.GHttpServe) {
+	// 仓库相关路由设置
+	route := hs.Group("/raft")
+	route.Get("/status", nil, status)
+	route.Get("/put/:key/:value", nil, put)
+	route.Get("/get/:key", nil, get)
+	route.Get("/node/list", nil, nodeList)
+}
+
+func status(_ http.ResponseWriter, _ *http.Request, _ interface{}, _ map[string]string) (respModel interface{}, custom bool) {
+	return raft4go.Status(), false
+}
+
+func put(_ http.ResponseWriter, _ *http.Request, _ interface{}, paramMaps map[string]string) (respModel interface{}, custom bool) {
+	key := paramMaps["key"]
+	value := paramMaps["value"]
+	gnomon.Log().Info("raft", gnomon.Log().Field("key", key),
+		gnomon.Log().Field("value", value))
+	return raft4go.Put(key, []byte(value)), false
+}
+
+func get(_ http.ResponseWriter, _ *http.Request, _ interface{}, paramMaps map[string]string) (respModel interface{}, custom bool) {
+	key := paramMaps["key"]
+	gnomon.Log().Info("raft", gnomon.Log().Field("key", key))
+	if bytes, err := raft4go.Get(key); nil != err {
+		return err, false
+	} else {
+		return string(bytes), false
 	}
-	log.Fatal(server.ListenAndServe())
+}
+
+func nodeList(_ http.ResponseWriter, _ *http.Request, _ interface{}, _ map[string]string) (respModel interface{}, custom bool) {
+	return raft4go.NodeList(), false
 }

@@ -230,7 +230,5 @@ func Get(key string) ([]byte, error) {
 
 // NodeList 查看当前集群中节点集合，包括自身
 func NodeList() map[string]*nodal {
-	nodalList := raft.persistence.nodes
-	nodalList[raft.persistence.node.Id] = raft.persistence.node
-	return nodalList
+	return raft.persistence.nodes
 }

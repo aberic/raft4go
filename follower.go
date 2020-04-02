@@ -111,7 +111,7 @@ func (f *follower) put(key string, value []byte) error {
 	if nil == value {
 		return errors.New("value can't be nil")
 	}
-	return reqSyncData(context.Background(), raft.persistence.leader, &ReqSyncData{
+	return reqSyncData(context.Background(), raft.persistence.nodes[raft.persistence.leader.Id], &ReqSyncData{
 		Term:      raft.persistence.term,
 		LeaderId:  raft.persistence.leader.Id,
 		LeaderUrl: raft.persistence.leader.Url,
