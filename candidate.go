@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/log"
 	"strconv"
 	"sync"
 	"time"
@@ -34,7 +35,7 @@ type candidate struct {
 
 // work 开始本职工作
 func (c *candidate) start() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "start"), gnomon.Log().Field("term", raft.persistence.term))
+	log.Info("raft", log.Field("candidate", "start"), log.Field("term", raft.persistence.term))
 	c.base.setStatus(RoleStatusCandidate)
 	c.timestamp = time.Now().UnixNano()
 	_ = raft.persistence.votedFor.set(raft.persistence.node.Id, raft.persistence.term+1, c.timestamp)
@@ -51,7 +52,7 @@ func (c *candidate) update(hb *heartBeat) {
 
 // release 角色释放
 func (c *candidate) release() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("candidate", "release"))
+	log.Info("raft", log.Field("candidate", "release"))
 	c.cancel()
 	//c.ctx = nil
 	//c.cancel = nil
@@ -122,8 +123,8 @@ func (c *candidate) votes() {
 		}()
 	}
 	wg.Wait()
-	gnomon.Log().Info("raft",
-		gnomon.Log().Field("vote", gnomon.String().StringBuilder("len(votes)+1 = ",
+	log.Info("raft",
+		log.Field("vote", gnomon.String().StringBuilder("len(votes)+1 = ",
 			strconv.Itoa(len(votes)+1), " and nodeCount/2 = ", strconv.Itoa(nodeCount/2))))
 	if len(votes)+1 > nodeCount/2 {
 		raft.persistence.term += 1

@@ -18,6 +18,7 @@ import (
 	"github.com/aberic/gnomon"
 	"github.com/aberic/gnomon/grope"
 	"github.com/aberic/raft4go"
+	"github.com/aberic/raft4go/log"
 	"net/http"
 )
 
@@ -65,14 +66,14 @@ func status(_ http.ResponseWriter, _ *http.Request, _ interface{}, _ map[string]
 func put(_ http.ResponseWriter, _ *http.Request, _ interface{}, paramMaps map[string]string) (respModel interface{}, custom bool) {
 	key := paramMaps["key"]
 	value := paramMaps["value"]
-	gnomon.Log().Info("raft", gnomon.Log().Field("key", key),
-		gnomon.Log().Field("value", value))
+	log.Info("raft", log.Field("key", key),
+		log.Field("value", value))
 	return raft4go.Put(key, []byte(value)), false
 }
 
 func get(_ http.ResponseWriter, _ *http.Request, _ interface{}, paramMaps map[string]string) (respModel interface{}, custom bool) {
 	key := paramMaps["key"]
-	gnomon.Log().Info("raft", gnomon.Log().Field("key", key))
+	log.Info("raft", log.Field("key", key))
 	if bytes, err := raft4go.Get(key); nil != err {
 		return err, false
 	} else {

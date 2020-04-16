@@ -17,6 +17,7 @@ package raft4go
 import (
 	"context"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/log"
 	"google.golang.org/grpc"
 )
 
@@ -30,7 +31,7 @@ func reqHeartbeat(ctx context.Context, node *nodal, in *ReqHeartBeat) {
 			//客户端向grpc服务端发起请求
 			return cli.Heartbeat(context.Background(), in)
 		}); nil != err {
-			gnomon.Log().Warn("raft", gnomon.Log().Err(err))
+			log.Warn("raft", log.Err(err))
 			node.UnusualTimes++
 			return
 		}
@@ -64,7 +65,7 @@ func reqNodeList(ctx context.Context, node *nodal, in *ReqNodeList) ([]*Node, er
 			return cli.NodeList(context.Background(), in)
 		})
 		if nil != err {
-			gnomon.Log().Warn("raft", gnomon.Log().Err(err))
+			log.Warn("raft", log.Err(err))
 			errChan <- err
 		} else {
 			resultChan <- resp.(*RespNodeList).Nodes
@@ -101,7 +102,7 @@ func reqDataList(ctx context.Context, node *nodal, in *ReqDataList) ([]*Data, er
 			return cli.DataList(context.Background(), in)
 		})
 		if nil != err {
-			gnomon.Log().Warn("raft", gnomon.Log().Err(err))
+			log.Warn("raft", log.Err(err))
 			errChan <- err
 		} else {
 			resultChan <- resp.(*RespDataList).DataArr
@@ -138,7 +139,7 @@ func reqData(ctx context.Context, node *nodal, in *ReqData) ([]byte, error) {
 			return cli.Data(context.Background(), in)
 		})
 		if nil != err {
-			gnomon.Log().Warn("raft", gnomon.Log().Err(err))
+			log.Warn("raft", log.Err(err))
 			errChan <- err
 		} else {
 			resultChan <- resp.(*RespData).Value
@@ -180,7 +181,7 @@ func reqSyncData(ctx context.Context, node *nodal, in *ReqSyncData) error {
 			return cli.SyncData(context.Background(), in)
 		})
 		if nil != err {
-			gnomon.Log().Warn("raft", gnomon.Log().Err(err))
+			log.Warn("raft", log.Err(err))
 			errChan <- err
 		} else {
 			resultChan <- struct{}{}
@@ -217,7 +218,7 @@ func reqVote(ctx context.Context, node *nodal, in *ReqVote) bool {
 			return cli.Vote(context.Background(), in)
 		})
 		if nil != err {
-			gnomon.Log().Warn("raft", gnomon.Log().Err(err))
+			log.Warn("raft", log.Err(err))
 			errChan <- err
 		} else {
 			resultChan <- resp.(*RespVote).VoteGranted

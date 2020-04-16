@@ -17,6 +17,7 @@ package raft4go
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/log"
 	"strings"
 	"sync"
 	"time"
@@ -36,11 +37,11 @@ type Raft struct {
 func (r *Raft) start() {
 	r.once.Do(func() {
 		r.init()
-		gnomon.Log().Info("raft init success")
+		log.Info("raft init success")
 		r.initEnv()
-		gnomon.Log().Info("raft env init success")
+		log.Info("raft env init success")
 		r.initRole()
-		gnomon.Log().Info("raft role init success")
+		log.Info("raft role init success")
 	})
 }
 
@@ -51,17 +52,17 @@ func (r *Raft) start() {
 // nodes 集群节点信息
 func (r *Raft) startWithParams(node *Node, nodes []*Node) {
 	if nil == node || nil == nodes {
-		gnomon.Log().Error("raft", gnomon.Log().Field("describe", "startWithParams fail"),
-			gnomon.Log().Errs("params can not be nil"))
+		log.Error("raft", log.Field("describe", "startWithParams fail"),
+			log.Errs("params can not be nil"))
 		return
 	}
 	r.once.Do(func() {
 		r.init()
-		gnomon.Log().Info("raft init success")
+		log.Info("raft init success")
 		r.initWithParams(node, nodes)
-		gnomon.Log().Info("raft params init success")
+		log.Info("raft params init success")
 		r.initRole()
-		gnomon.Log().Info("raft role init success")
+		log.Info("raft role init success")
 	})
 }
 
@@ -89,26 +90,26 @@ func (r *Raft) initEnv() {
 	//_ = os.Setenv(cluster, "1=127.0.0.1:19877,2=127.0.0.1:19878,3=127.0.0.1:19879")
 	if k8s := gnomon.Env().GetBool(k8sEnv); k8s {
 		if r.persistence.node.Url = gnomon.Env().Get("HOSTNAME"); gnomon.String().IsEmpty(r.persistence.node.Url) {
-			gnomon.Log().Error("raft", gnomon.Log().Field("describe", "init with k8s fail"),
-				gnomon.Log().Field("addr", r.persistence.node.Url))
+			log.Error("raft", log.Field("describe", "init with k8s fail"),
+				log.Field("addr", r.persistence.node.Url))
 			return
 		}
 		r.persistence.node.Id = strings.Split(r.persistence.node.Url, "-")[1]
-		gnomon.Log().Info("raft", gnomon.Log().Field("describe", "init with k8s"),
-			gnomon.Log().Field("addr", r.persistence.node.Url), gnomon.Log().Field("id", r.persistence.node.Id))
+		log.Info("raft", log.Field("describe", "init with k8s"),
+			log.Field("addr", r.persistence.node.Url), log.Field("id", r.persistence.node.Id))
 	} else {
 		if r.persistence.node.Url = gnomon.Env().Get(nodeAddr); gnomon.String().IsEmpty(r.persistence.node.Url) {
-			gnomon.Log().Error("raft", gnomon.Log().Field("describe", "init with env fail"),
-				gnomon.Log().Errs("NODE_ADDRESS is empty"))
+			log.Error("raft", log.Field("describe", "init with env fail"),
+				log.Errs("NODE_ADDRESS is empty"))
 			return
 		}
 		if r.persistence.node.Id = gnomon.Env().Get(brokerID); gnomon.String().IsEmpty(r.persistence.node.Id) {
-			gnomon.Log().Error("raft", gnomon.Log().Field("describe", "init with env fail"),
-				gnomon.Log().Errs("broker id is not appoint"))
+			log.Error("raft", log.Field("describe", "init with env fail"),
+				log.Errs("broker id is not appoint"))
 			return
 		}
-		gnomon.Log().Info("raft", gnomon.Log().Field("describe", "init with env"),
-			gnomon.Log().Field("addr", r.persistence.node.Url), gnomon.Log().Field("id", r.persistence.node.Id))
+		log.Info("raft", log.Field("describe", "init with env"),
+			log.Field("addr", r.persistence.node.Url), log.Field("id", r.persistence.node.Id))
 	}
 	raft.persistence.node.UnusualTimes = -1
 	r.initCluster(gnomon.Env().Get(cluster))
@@ -126,15 +127,15 @@ func (r *Raft) initCluster(nodesStr string) {
 	if gnomon.String().IsEmpty(nodesStr) {
 		nodesStr = gnomon.Env().Get(cluster)
 	}
-	gnomon.Log().Info("raft", gnomon.Log().Field("node cluster", nodesStr))
+	log.Info("raft", log.Field("node cluster", nodesStr))
 	if gnomon.String().IsNotEmpty(nodesStr) {
 		clusterArr := strings.Split(nodesStr, ",")
 		for _, cluster := range clusterArr {
 			clusterSplit := strings.Split(cluster, "=")
 			id := clusterSplit[0]
 			if gnomon.String().IsEmpty(id) {
-				gnomon.Log().Error("raft", gnomon.Log().Field("describe", "init with env fail"),
-					gnomon.Log().Errs("one of cluster's broker id is nil"))
+				log.Error("raft", log.Field("describe", "init with env fail"),
+					log.Errs("one of cluster's broker id is nil"))
 				continue
 			}
 			if id == r.persistence.node.Id {
@@ -154,7 +155,7 @@ var (
 
 // initRole raft角色初始化
 func (r *Raft) initRole() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("initRole", "init raft role"))
+	log.Info("raft", log.Field("initRole", "init raft role"))
 	lead = &leader{}
 	follow = &follower{}
 	candi = &candidate{}

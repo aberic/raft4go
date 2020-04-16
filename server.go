@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/log"
 	"golang.org/x/net/context"
 )
 
@@ -29,7 +30,7 @@ func (s *Server) Heartbeat(ctx context.Context, req *ReqHeartBeat) (resp *RespHe
 		addr string
 		port int
 	)
-	gnomon.Log().Debug("raft", gnomon.Log().Field("receive heartbeat", req))
+	log.Debug("raft", log.Field("receive heartbeat", req))
 	if _, ok := raft.persistence.nodes[req.Id]; !ok {
 		raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
 	}
@@ -103,7 +104,7 @@ func (s *Server) SyncData(_ context.Context, req *ReqSyncData) (resp *RespSyncDa
 
 // Vote 接收发起选举，索要选票
 func (s *Server) Vote(_ context.Context, req *ReqVote) (resp *RespVote, err error) {
-	gnomon.Log().Info("raft", gnomon.Log().Field("vote", *req))
+	log.Info("raft", log.Field("vote", *req))
 	if node, ok := raft.persistence.nodes[req.Id]; ok {
 		if node.Url != req.Url {
 			errStr := fmt.Sprintf(

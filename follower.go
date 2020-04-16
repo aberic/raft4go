@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/log"
 	"sync"
 	"time"
 )
@@ -35,7 +36,7 @@ type follower struct {
 
 // work 开始本职工作
 func (f *follower) start() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("follow", "start"), gnomon.Log().Field("term", raft.persistence.term))
+	log.Info("raft", log.Field("follow", "start"), log.Field("term", raft.persistence.term))
 	f.base.setStatus(RoleStatusFollower)
 	f.scheduled = time.NewTimer(time.Millisecond * time.Duration(timeCheck))
 	f.stop = make(chan struct{}, 1)
@@ -72,9 +73,9 @@ func (f *follower) update(hb *heartBeat) {
 		// 判断当前心跳节点是否存在与节点集群，如不存在，则新加
 		if node, ok := raft.persistence.nodes[hb.Id]; ok {
 			if hb.Url != node.Url {
-				gnomon.Log().Warn("raft", gnomon.Log().Field("heartbeat", "same id with different url"),
-					gnomon.Log().Field("hb.id", hb.Id), gnomon.Log().Field("hb.url", hb.Url),
-					gnomon.Log().Field("node.id", node.Id), gnomon.Log().Field("node.url", node.Url))
+				log.Warn("raft", log.Field("heartbeat", "same id with different url"),
+					log.Field("hb.id", hb.Id), log.Field("hb.url", hb.Url),
+					log.Field("node.id", node.Id), log.Field("node.url", node.Url))
 				return
 			}
 		} else {
@@ -97,7 +98,7 @@ func (f *follower) update(hb *heartBeat) {
 
 // release 角色释放
 func (f *follower) release() {
-	gnomon.Log().Info("raft", gnomon.Log().Field("follow", "release"))
+	log.Info("raft", log.Field("follow", "release"))
 	f.stop <- struct{}{} // 关闭检查leader节点是否状态超时
 	f.synced = false     // 重置同步状态
 	f.scheduled.Stop()
@@ -125,7 +126,7 @@ func (f *follower) put(key string, value []byte) error {
 func (f *follower) syncData(req *ReqSyncData) error {
 	if req.LeaderId != raft.persistence.leader.Id {
 		errStr := fmt.Sprintf("cluster status error, now is follower, req.leader.id is %s, raft.leader.id is %s", req.LeaderId, raft.persistence.leader.Id)
-		gnomon.Log().Warn("raft", gnomon.Log().Field("describe", errStr))
+		log.Warn("raft", log.Field("describe", errStr))
 		return errors.New(errStr)
 	}
 	raft.persistence.data.put(req.Key, req.Value, req.Version)
@@ -165,7 +166,7 @@ func (f *follower) checkTimeOut() {
 		select {
 		case <-f.scheduled.C:
 			if time.Now().UnixNano()/1e6-f.time > timeout {
-				gnomon.Log().Info("raft", gnomon.Log().Field("heartbeat", "timeout"))
+				log.Info("raft", log.Field("heartbeat", "timeout"))
 				raft.tuneCandidate()
 			} else {
 				f.scheduled.Reset(time.Millisecond * time.Duration(timeCheck))
