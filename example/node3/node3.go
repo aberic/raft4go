@@ -53,34 +53,34 @@ func main() {
 func router(hs *grope.GHttpServe) {
 	// 仓库相关路由设置
 	route := hs.Group("/raft")
-	route.Get("/status", nil, status)
-	route.Get("/put/:key/:value", nil, put)
-	route.Get("/get/:key", nil, get)
-	route.Get("/node/list", nil, nodeList)
+	route.Get("/status", status)
+	route.Get("/put/:key/:value", put)
+	route.Get("/get/:key", get)
+	route.Get("/node/list", nodeList)
 }
 
-func status(_ http.ResponseWriter, _ *http.Request, _ interface{}, _ map[string]string) (respModel interface{}, custom bool) {
-	return raft4go.Status(), false
+func status(ctx *grope.Context) {
+	_ = ctx.ResponseJson(http.StatusOK, raft4go.Status())
 }
 
-func put(_ http.ResponseWriter, _ *http.Request, _ interface{}, paramMaps map[string]string) (respModel interface{}, custom bool) {
-	key := paramMaps["key"]
-	value := paramMaps["value"]
+func put(ctx *grope.Context) {
+	key := ctx.Values()["key"]
+	value := ctx.Values()["value"]
 	log.Info("raft", log.Field("key", key),
 		log.Field("value", value))
-	return raft4go.Put(key, []byte(value)), false
+	_ = ctx.ResponseJson(http.StatusOK, raft4go.Put(key, []byte(value)))
 }
 
-func get(_ http.ResponseWriter, _ *http.Request, _ interface{}, paramMaps map[string]string) (respModel interface{}, custom bool) {
-	key := paramMaps["key"]
+func get(ctx *grope.Context) {
+	key := ctx.Values()["key"]
 	log.Info("raft", log.Field("key", key))
 	if bytes, err := raft4go.Get(key); nil != err {
-		return err, false
+		_ = ctx.ResponseText(http.StatusOK, err.Error())
 	} else {
-		return string(bytes), false
+		_ = ctx.ResponseJson(http.StatusOK, string(bytes))
 	}
 }
 
-func nodeList(_ http.ResponseWriter, _ *http.Request, _ interface{}, _ map[string]string) (respModel interface{}, custom bool) {
-	return raft4go.NodeList(), false
+func nodeList(ctx *grope.Context) {
+	_ = ctx.ResponseJson(http.StatusOK, raft4go.NodeList())
 }
