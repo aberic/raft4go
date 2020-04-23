@@ -15,7 +15,6 @@
 package main
 
 import (
-	"github.com/aberic/gnomon"
 	"github.com/aberic/gnomon/grope"
 	"github.com/aberic/raft4go"
 	"github.com/aberic/raft4go/log"
@@ -45,9 +44,9 @@ func main() {
 		},
 	})
 
-	httpServe := gnomon.Grope().NewHttpServe()
+	httpServe := grope.NewHttpServe()
 	router(httpServe)
-	gnomon.Grope().ListenAndServe(":8081", httpServe)
+	grope.ListenAndServe(":8081", httpServe)
 }
 
 func router(hs *grope.GHttpServe) {
