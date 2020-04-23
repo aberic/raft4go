@@ -2,7 +2,7 @@ package log
 
 import (
 	"github.com/aberic/gnomon"
-	"github.com/aberic/raft4go"
+	"github.com/aberic/raft4go/env"
 	"os"
 	"strings"
 )
@@ -17,12 +17,12 @@ var (
 )
 
 func init() {
-	logFileDir = gnomon.Env().GetD(raft4go.LogDirEnv, os.TempDir())
-	logFileMaxSize = gnomon.Env().GetIntD(raft4go.LogFileMaxSizeEnv, 1024)
-	logFileMaxAge = gnomon.Env().GetIntD(raft4go.LogFileMaxAgeEnv, 7)
-	logUtc = gnomon.Env().GetBool(raft4go.LogUtcEnv)
-	logLevel = gnomon.Env().GetD(raft4go.LogLevelEnv, "Debug")
-	logProduction = gnomon.Env().GetBool(raft4go.LogProductionEnv)
+	logFileDir = gnomon.Env().GetD(env.LogDirEnv, os.TempDir())
+	logFileMaxSize = gnomon.Env().GetIntD(env.LogFileMaxSizeEnv, 1024)
+	logFileMaxAge = gnomon.Env().GetIntD(env.LogFileMaxAgeEnv, 7)
+	logUtc = gnomon.Env().GetBool(env.LogUtcEnv)
+	logLevel = gnomon.Env().GetD(env.LogLevelEnv, "Debug")
+	logProduction = gnomon.Env().GetBool(env.LogProductionEnv)
 	if err := initLog(); nil != err {
 		panic(err)
 	}

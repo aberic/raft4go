@@ -28,6 +28,7 @@ package raft4go
 
 import (
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/env"
 	"github.com/aberic/raft4go/log"
 	"google.golang.org/grpc"
 	"net"
@@ -37,28 +38,11 @@ import (
 // export GOPROXY=https://goproxy.io
 // export GO111MODULE=on
 
-const (
-	k8sEnv            = "RAFT_K8S"               // K8S=true
-	brokerID          = "RAFT_BROKER_ID"         // BROKER_ID=1
-	nodeAddr          = "RAFT_NODE_ADDRESS"      // NODE_ADDRESS=example.com NODE_ADDRESS=127.0.0.1:19865:19877
-	cluster           = "RAFT_CLUSTER"           // CLUSTER=1=127.0.0.1:19865:19877,2=127.0.0.2:19865:19877,3=127.0.0.3:19865:19877
-	timeHeartbeatEnv  = "RAFT_TIME_HEARTBEAT"    // raft心跳定时时间ms
-	timeCheckEnv      = "RAFT_TIME_CHECK"        // raft心跳定时检查超时时间ms
-	timeoutEnv        = "RAFT_TIMEOUT"           // raft心跳超时ms
-	portEnv           = "RAFT_PORT"              // raft服务开放端口号，默认19877
-	LogDirEnv         = "RAFT_LOG_DIR"           // 日志文件目录
-	LogFileMaxSizeEnv = "RAFT_LOG_FILE_MAX_SIZE" // 每个日志文件保存的最大尺寸 单位：M
-	LogFileMaxAgeEnv  = "RAFT_LOG_FILE_MAX_AGE"  // 文件最多保存多少天
-	LogUtcEnv         = "RAFT_LOG_UTC"           // CST & UTC 时间
-	LogLevelEnv       = "RAFT_LOG_LEVEL"         // 日志级别(debugLevel/infoLevel/warnLevel/ErrorLevel/panicLevel/fatalLevel)
-	LogProductionEnv  = "RAFT_LOG_PRODUCTION"    // 是否生产环境，在生产环境下控制台不会输出任何日志
-)
-
 func init() {
-	timeHeartbeat = gnomon.Env().GetInt64D(timeHeartbeatEnv, 1000)
-	timeCheck = gnomon.Env().GetInt64D(timeCheckEnv, 1500)
-	timeout = gnomon.Env().GetInt64D(timeoutEnv, 2000)
-	port = gnomon.Env().GetD(portEnv, "19877")
+	timeHeartbeat = gnomon.Env().GetInt64D(env.TimeHeartbeatEnv, 1000)
+	timeCheck = gnomon.Env().GetInt64D(env.TimeCheckEnv, 1500)
+	timeout = gnomon.Env().GetInt64D(env.TimeoutEnv, 2000)
+	port = gnomon.Env().GetD(env.PortEnv, "19877")
 }
 
 var (

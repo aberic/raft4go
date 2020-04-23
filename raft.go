@@ -17,6 +17,7 @@ package raft4go
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/raft4go/env"
 	"github.com/aberic/raft4go/log"
 	"strings"
 	"sync"
@@ -88,7 +89,7 @@ func (r *Raft) initEnv() {
 	//_ = os.Setenv(brokerID, "1")
 	//_ = os.Setenv(nodeAddr, "127.0.0.1:19880")
 	//_ = os.Setenv(cluster, "1=127.0.0.1:19877,2=127.0.0.1:19878,3=127.0.0.1:19879")
-	if k8s := gnomon.Env().GetBool(k8sEnv); k8s {
+	if k8s := gnomon.Env().GetBool(env.K8sEnv); k8s {
 		if r.persistence.node.Url = gnomon.Env().Get("HOSTNAME"); gnomon.String().IsEmpty(r.persistence.node.Url) {
 			log.Error("raft", log.Field("describe", "init with k8s fail"),
 				log.Field("addr", r.persistence.node.Url))
@@ -98,12 +99,12 @@ func (r *Raft) initEnv() {
 		log.Info("raft", log.Field("describe", "init with k8s"),
 			log.Field("addr", r.persistence.node.Url), log.Field("id", r.persistence.node.Id))
 	} else {
-		if r.persistence.node.Url = gnomon.Env().Get(nodeAddr); gnomon.String().IsEmpty(r.persistence.node.Url) {
+		if r.persistence.node.Url = gnomon.Env().Get(env.NodeAddr); gnomon.String().IsEmpty(r.persistence.node.Url) {
 			log.Error("raft", log.Field("describe", "init with env fail"),
 				log.Errs("NODE_ADDRESS is empty"))
 			return
 		}
-		if r.persistence.node.Id = gnomon.Env().Get(brokerID); gnomon.String().IsEmpty(r.persistence.node.Id) {
+		if r.persistence.node.Id = gnomon.Env().Get(env.BrokerID); gnomon.String().IsEmpty(r.persistence.node.Id) {
 			log.Error("raft", log.Field("describe", "init with env fail"),
 				log.Errs("broker id is not appoint"))
 			return
@@ -112,7 +113,7 @@ func (r *Raft) initEnv() {
 			log.Field("addr", r.persistence.node.Url), log.Field("id", r.persistence.node.Id))
 	}
 	raft.persistence.node.UnusualTimes = -1
-	r.initCluster(gnomon.Env().Get(cluster))
+	r.initCluster(gnomon.Env().Get(env.Cluster))
 }
 
 // initEnv raft环境变量初始化
@@ -125,7 +126,7 @@ func (r *Raft) initWithParams(node *Node, nodes []*Node) {
 // initCluster 初始化集群节点
 func (r *Raft) initCluster(nodesStr string) {
 	if gnomon.String().IsEmpty(nodesStr) {
-		nodesStr = gnomon.Env().Get(cluster)
+		nodesStr = gnomon.Env().Get(env.Cluster)
 	}
 	log.Info("raft", log.Field("node cluster", nodesStr))
 	if gnomon.String().IsNotEmpty(nodesStr) {
