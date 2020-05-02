@@ -24,7 +24,7 @@ import (
 func main() {
 	node := &raft4go.Node{Id: "3", Url: "127.0.0.1:19879"}
 	nodes := []*raft4go.Node{
-		{Id: "1", Url: "127.0.0.1:19877"},
+		{Id: "1", Url: "127.0.0.1:198799"},
 		{Id: "2", Url: "127.0.0.1:19878"},
 	}
 	raft4go.RaftStart(&raft4go.Params{
