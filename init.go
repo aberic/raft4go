@@ -58,7 +58,6 @@ func init() {
 	logUtc = gnomon.EnvGetBool(logUtcEnv)
 	logLevel = gnomon.EnvGetD(logLevelEnv, "Debug")
 	logProduction = gnomon.EnvGetBool(logProductionEnv)
-	log.Fit(logLevel, logFileDir, logFileMaxSize, logFileMaxAge, logUtc, logProduction)
 }
 
 var (
@@ -70,6 +69,7 @@ var (
 	port          string    // raft服务开放端口号，默认19877
 )
 
+// Params 启动参数
 type Params struct {
 	Node          *Node   // 自身节点信息
 	Nodes         []*Node // 集群节点信息
@@ -80,6 +80,7 @@ type Params struct {
 	Log           *Log    // 日志
 }
 
+// Log 日志属性
 type Log struct {
 	Dir         string // 日志文件目录
 	FileMaxSize int    // 每个日志文件保存的最大尺寸 单位：M
@@ -112,6 +113,7 @@ func gRPCListener() {
 
 // RaftStart 启动且只能启动一次Raft服务
 func RaftStart() {
+	log.Fit(logLevel, logFileDir, logFileMaxSize, logFileMaxAge, logUtc, logProduction)
 	log.Info("raft", log.Field("new", "new instance raft"))
 	once.Do(func() {
 		go gRPCListener()
@@ -142,6 +144,7 @@ func RaftStartWithParams(params *Params) {
 	if gnomon.StringIsNotEmpty(params.PortReq) {
 		port = params.PortReq
 	}
+	log.Fit(params.Log.Level, params.Log.Dir, params.Log.FileMaxSize, params.Log.FileMaxAge, params.Log.Utc, params.Log.Production)
 	log.Info("raft", log.Field("new", "new instance raft"))
 	once.Do(func() {
 		go gRPCListener()
@@ -168,6 +171,6 @@ func Get(key string) ([]byte, error) {
 }
 
 // NodeList 查看当前集群中节点集合，包括自身
-func NodeList() map[string]*nodal {
+func NodeList() Nodes {
 	return raft.persistence.nodes
 }

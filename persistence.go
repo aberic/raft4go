@@ -51,15 +51,18 @@ func (v *votedFor) set(id string, term int32, timestamp int64) bool {
 	return false
 }
 
+// Nodes 当前Raft可见节点集合
+type Nodes map[string]*nodal
+
 // persistence 所有角色都拥有的持久化的状态（在响应RPC请求之前变更且持久化的状态）
 type persistence struct {
-	leader    *nodal            // 当前任务Leader
-	term      int32             // 服务器的任期，初始为0，递增
-	node      *nodal            // 自身节点信息
-	nodes     map[string]*nodal // 当前Raft可见节点集合
-	nodesLock sync.RWMutex      // 当前Raft可见节点集合锁
-	votedFor  *votedFor         // 在当前获得选票的候选人的 Id
-	data      *data             // raft数据内容
+	leader    *nodal       // 当前任务Leader
+	term      int32        // 服务器的任期，初始为0，递增
+	node      *nodal       // 自身节点信息
+	nodes     Nodes        // 当前Raft可见节点集合
+	nodesLock sync.RWMutex // 当前Raft可见节点集合锁
+	votedFor  *votedFor    // 在当前获得选票的候选人的 Id
+	data      *data        // raft数据内容
 }
 
 func (p *persistence) setLeader(id, url string) {
@@ -107,11 +110,13 @@ type nodal struct {
 }
 
 func newNode(id, url string) (*nodal, error) {
-	if p, err := gnomon.NewPond(10, 100, 5*time.Second, func() (c gnomon.Conn, err error) {
+	var (
+		p   *gnomon.Pond
+		err error
+	)
+	if p, err = gnomon.NewPond(10, 100, 5*time.Second, func() (c gnomon.Conn, err error) {
 		return grpc.Dial(url, grpc.WithInsecure())
-	}); nil != err {
-		return nil, err
-	} else {
+	}); nil == err {
 		return &nodal{
 			Node: Node{
 				Id:           id,
@@ -121,4 +126,5 @@ func newNode(id, url string) (*nodal, error) {
 			pool: p,
 		}, nil
 	}
+	return nil, err
 }

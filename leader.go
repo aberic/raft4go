@@ -91,7 +91,7 @@ func (l *leader) put(key string, value []byte) error {
 	}
 	// todo 流程待正规化
 	for _, node := range raft.persistence.nodes {
-		go func() {
+		go func(node *nodal) {
 			_ = reqSyncData(context.Background(), node, &ReqSyncData{
 				Term:      raft.persistence.term,
 				LeaderId:  raft.persistence.node.Id,
@@ -100,7 +100,7 @@ func (l *leader) put(key string, value []byte) error {
 				Value:     value,
 				Version:   version,
 			})
-		}()
+		}(node)
 	}
 	raft.persistence.data.put(key, value, version)
 	return nil
@@ -137,7 +137,7 @@ func (l *leader) vote(req *ReqVote) (bool, error) {
 
 // roleStatus 获取角色状态
 func (l *leader) roleStatus() RoleStatus {
-	return l.base.status
+	return l.base.roleStatus()
 }
 
 // heartbeats 向节点集合发送心跳

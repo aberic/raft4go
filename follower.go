@@ -147,7 +147,7 @@ func (f *follower) vote(req *ReqVote) (bool, error) {
 
 // roleStatus 获取角色状态
 func (f *follower) roleStatus() RoleStatus {
-	return f.base.status
+	return f.base.roleStatus()
 }
 
 // refreshTime 刷新心跳超时时间
@@ -240,6 +240,7 @@ func (f *follower) compareAndSwap(hb *heartBeat, dataList []*Data) {
 	// 同步数据等相关操作
 	errStruct := make(chan struct{}, len(dataList))
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // 确保所有路径都取消了上下文，以避免上下文泄漏
 	wg := sync.WaitGroup{}
 	for _, data := range dataList {
 		di, err := raft.persistence.data.get(data.Key)

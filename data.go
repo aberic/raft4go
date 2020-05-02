@@ -63,9 +63,8 @@ func (d *data) get(key string) (dataInfo *dataInfo, err error) {
 		defer d.dataMap[key].lock.RUnlock()
 		d.dataMap[key].lock.RLock()
 		return d.dataMap[key], nil
-	} else {
-		return nil, fmt.Errorf("value of key is not exist")
 	}
+	return nil, fmt.Errorf("value of key is not exist")
 }
 
 func (d *data) updateHash() {

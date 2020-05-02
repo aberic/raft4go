@@ -22,9 +22,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Server gRPC服务
 type Server struct{}
 
-// HeartBeat 接收发送心跳
+// Heartbeat 接收发送心跳
 func (s *Server) Heartbeat(ctx context.Context, req *ReqHeartBeat) (resp *RespHeartBeat, err error) {
 	var (
 		addr string
@@ -78,11 +79,11 @@ func (s *Server) NodeList(_ context.Context, req *ReqNodeList) (resp *RespNodeLi
 
 // Data 接收请求当前集群指定key数据
 func (s *Server) Data(_ context.Context, req *ReqData) (resp *RespData, err error) {
-	if di, err := raft.persistence.data.get(req.Key); nil != err {
+	di, err := raft.persistence.data.get(req.Key)
+	if nil != err {
 		return nil, err
-	} else {
-		return &RespData{Value: di.value}, nil
 	}
+	return &RespData{Value: di.value}, nil
 }
 
 // DataList 接收请求集群数据集合

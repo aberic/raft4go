@@ -141,8 +141,8 @@ func (r *Raft) initCluster(nodesStr string) {
 			if id == r.persistence.node.Id {
 				continue
 			}
-			nodeUrl := clusterSplit[1]
-			r.persistence.appendNode(&Node{Id: id, Url: nodeUrl, UnusualTimes: 0})
+			nodeURL := clusterSplit[1]
+			r.persistence.appendNode(&Node{Id: id, Url: nodeURL, UnusualTimes: 0})
 		}
 	}
 }
@@ -179,10 +179,10 @@ func (r *Raft) tuneFollower(hb *heartBeat) {
 	defer r.roleChangeLock.Unlock()
 	r.roleChangeLock.Lock()
 	if nil != r.role {
-		if r.role.roleStatus() == RoleStatusFollower {
-			return
-		} else {
+		if r.role.roleStatus() != RoleStatusFollower {
 			r.role.release()
+		} else {
+			return
 		}
 	}
 	r.role = follow
@@ -214,9 +214,9 @@ func (r *Raft) get(key string) ([]byte, error) {
 	if gnomon.StringIsEmpty(key) {
 		return nil, errors.New("key can't be empty")
 	}
-	if dataInfo, err := raft.persistence.data.get(key); nil != err {
-		return nil, err
-	} else {
+	dataInfo, err := raft.persistence.data.get(key)
+	if nil == err {
 		return dataInfo.value, nil
 	}
+	return nil, err
 }

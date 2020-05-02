@@ -14,11 +14,15 @@
 
 package raft4go
 
+// RoleStatus 角色定义
 type RoleStatus int
 
 const (
+	// RoleStatusLeader leader
 	RoleStatusLeader RoleStatus = iota
+	// RoleStatusCandidate candidate
 	RoleStatusCandidate
+	// RoleStatusFollower follower
 	RoleStatusFollower
 )
 

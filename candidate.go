@@ -100,7 +100,7 @@ func (c *candidate) vote(req *ReqVote) (bool, error) {
 
 // roleStatus 获取角色状态
 func (c *candidate) roleStatus() RoleStatus {
-	return c.base.status
+	return c.base.roleStatus()
 }
 
 // votes 向节点集合发起投票
@@ -110,7 +110,7 @@ func (c *candidate) votes() {
 	wg := sync.WaitGroup{}
 	for _, node := range raft.persistence.nodes {
 		wg.Add(1)
-		go func() {
+		go func(node *nodal) {
 			defer wg.Done()
 			if voteGranted := reqVote(c.ctx, node, &ReqVote{
 				Id:        raft.persistence.node.Id,
@@ -120,14 +120,14 @@ func (c *candidate) votes() {
 			}); voteGranted {
 				votes <- struct{}{}
 			}
-		}()
+		}(node)
 	}
 	wg.Wait()
 	log.Info("raft",
 		log.Field("vote", gnomon.StringBuild("len(votes)+1 = ",
 			strconv.Itoa(len(votes)+1), " and nodeCount/2 = ", strconv.Itoa(nodeCount/2))))
 	if len(votes)+1 > nodeCount/2 {
-		raft.persistence.term += 1
+		raft.persistence.term++
 		raft.persistence.setLeader(raft.persistence.node.Id, raft.persistence.node.Url)
 		raft.tuneLeader()
 	} else {
