@@ -27,7 +27,7 @@ func main() {
 		{Id: "1", Url: "127.0.0.1:19877"},
 		{Id: "2", Url: "127.0.0.1:19878"},
 	}
-	raft4go.RaftStartWithParams(&raft4go.Params{
+	raft4go.RaftStart(&raft4go.Params{
 		Node:          node,
 		Nodes:         nodes,
 		TimeHeartbeat: 0,

@@ -112,17 +112,6 @@ func gRPCListener() {
 }
 
 // RaftStart 启动且只能启动一次Raft服务
-func RaftStart() {
-	log.Fit(logLevel, logFileDir, logFileMaxSize, logFileMaxAge, logUtc, logProduction)
-	log.Info("raft", log.Field("new", "new instance raft"))
-	once.Do(func() {
-		go gRPCListener()
-		raft = &Raft{}
-		raft.start()
-	})
-}
-
-// RaftStartWithParams 启动且只能启动一次Raft服务
 //
 // node 自身节点信息
 //
@@ -131,7 +120,7 @@ func RaftStart() {
 // timeCheck  raft心跳定时检查超时时间
 //
 // timeout raft心跳定时/超时ms
-func RaftStartWithParams(params *Params) {
+func RaftStart(params *Params) {
 	if params.TimeHeartbeat != 0 {
 		timeHeartbeat = params.TimeHeartbeat
 	}
