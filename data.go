@@ -43,7 +43,7 @@ func (d *data) put(key string, value []byte, version int32) {
 			d.dataMap[key].lock.Lock()
 			d.dataMap[key].value = value
 			d.dataMap[key].version = version
-			d.dataMap[key].hash = gnomon.CryptoHash().MD5Bytes(value)
+			d.dataMap[key].hash = gnomon.HashMD5Bytes(value)
 		}
 	} else {
 		defer d.lock.Unlock()
@@ -52,7 +52,7 @@ func (d *data) put(key string, value []byte, version int32) {
 			lock:    sync.RWMutex{},
 			value:   value,
 			version: version,
-			hash:    gnomon.CryptoHash().MD5Bytes(value),
+			hash:    gnomon.HashMD5Bytes(value),
 		}
 	}
 	d.updateHash()
@@ -78,7 +78,7 @@ func (d *data) updateHash() {
 	sort.Strings(vs)
 	var hashStr string
 	for _, v := range vs {
-		hashStr = gnomon.String().StringBuilder(hashStr, v)
+		hashStr = gnomon.StringBuild(hashStr, v)
 	}
-	d.hash = gnomon.CryptoHash().MD5(hashStr)
+	d.hash = gnomon.HashMD5(hashStr)
 }

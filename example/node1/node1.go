@@ -16,8 +16,8 @@ package main
 
 import (
 	"github.com/aberic/gnomon/grope"
+	"github.com/aberic/gnomon/log"
 	"github.com/aberic/raft4go"
-	"github.com/aberic/raft4go/log"
 	"net/http"
 )
 
@@ -44,7 +44,7 @@ func main() {
 		},
 	})
 
-	httpServe := grope.NewHttpServe()
+	httpServe := grope.NewHTTPServe()
 	router(httpServe)
 	grope.ListenAndServe(":8080", httpServe)
 }
@@ -59,7 +59,7 @@ func router(hs *grope.GHttpServe) {
 }
 
 func status(ctx *grope.Context) {
-	_ = ctx.ResponseJson(http.StatusOK, raft4go.Status())
+	_ = ctx.ResponseJSON(http.StatusOK, raft4go.Status())
 }
 
 func put(ctx *grope.Context) {
@@ -67,7 +67,7 @@ func put(ctx *grope.Context) {
 	value := ctx.Values()["value"]
 	log.Info("raft", log.Field("key", key),
 		log.Field("value", value))
-	_ = ctx.ResponseJson(http.StatusOK, raft4go.Put(key, []byte(value)))
+	_ = ctx.ResponseJSON(http.StatusOK, raft4go.Put(key, []byte(value)))
 }
 
 func get(ctx *grope.Context) {
@@ -76,10 +76,10 @@ func get(ctx *grope.Context) {
 	if bytes, err := raft4go.Get(key); nil != err {
 		_ = ctx.ResponseText(http.StatusOK, err.Error())
 	} else {
-		_ = ctx.ResponseJson(http.StatusOK, string(bytes))
+		_ = ctx.ResponseJSON(http.StatusOK, string(bytes))
 	}
 }
 
 func nodeList(ctx *grope.Context) {
-	_ = ctx.ResponseJson(http.StatusOK, raft4go.NodeList())
+	_ = ctx.ResponseJSON(http.StatusOK, raft4go.NodeList())
 }

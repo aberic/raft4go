@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/raft4go/log"
+	"github.com/aberic/gnomon/log"
 	"strconv"
 	"sync"
 	"time"
@@ -60,7 +60,7 @@ func (c *candidate) release() {
 
 // put 角色所属集群新增数据
 func (c *candidate) put(key string, value []byte) error {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return errors.New("key can't be empty")
 	}
 	if nil == value {
@@ -124,7 +124,7 @@ func (c *candidate) votes() {
 	}
 	wg.Wait()
 	log.Info("raft",
-		log.Field("vote", gnomon.String().StringBuilder("len(votes)+1 = ",
+		log.Field("vote", gnomon.StringBuild("len(votes)+1 = ",
 			strconv.Itoa(len(votes)+1), " and nodeCount/2 = ", strconv.Itoa(nodeCount/2))))
 	if len(votes)+1 > nodeCount/2 {
 		raft.persistence.term += 1

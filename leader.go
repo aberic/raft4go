@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/raft4go/log"
+	"github.com/aberic/gnomon/log"
 	"time"
 )
 
@@ -76,7 +76,7 @@ func (l *leader) release() {
 
 // put 角色所属集群新增数据
 func (l *leader) put(key string, value []byte) error {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return errors.New("key can't be empty")
 	}
 	if nil == value {

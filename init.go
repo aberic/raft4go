@@ -28,21 +28,37 @@ package raft4go
 
 import (
 	"github.com/aberic/gnomon"
-	"github.com/aberic/raft4go/env"
-	"github.com/aberic/raft4go/log"
+	"github.com/aberic/gnomon/log"
 	"google.golang.org/grpc"
 	"net"
+	"os"
 	"sync"
+)
+
+var (
+	logFileDir     string // 日志文件目录
+	logFileMaxSize int    // 每个日志文件保存的最大尺寸 单位：M
+	logFileMaxAge  int    // 文件最多保存多少天
+	logUtc         bool   // CST & UTC 时间
+	logLevel       string // 日志级别(debugLevel/infoLevel/warnLevel/ErrorLevel/panicLevel/fatalLevel)
+	logProduction  bool   // 是否生产环境，在生产环境下控制台不会输出任何日志
 )
 
 // export GOPROXY=https://goproxy.io
 // export GO111MODULE=on
 
 func init() {
-	timeHeartbeat = gnomon.Env().GetInt64D(env.TimeHeartbeatEnv, 1000)
-	timeCheck = gnomon.Env().GetInt64D(env.TimeCheckEnv, 1500)
-	timeout = gnomon.Env().GetInt64D(env.TimeoutEnv, 2000)
-	port = gnomon.Env().GetD(env.PortEnv, "19877")
+	timeHeartbeat = gnomon.EnvGetInt64D(timeHeartbeatEnv, 1000)
+	timeCheck = gnomon.EnvGetInt64D(timeCheckEnv, 1500)
+	timeout = gnomon.EnvGetInt64D(timeoutEnv, 2000)
+	port = gnomon.EnvGetD(portEnv, "19877")
+	logFileDir = gnomon.EnvGetD(logDirEnv, os.TempDir())
+	logFileMaxSize = gnomon.EnvGetIntD(logFileMaxSizeEnv, 1024)
+	logFileMaxAge = gnomon.EnvGetIntD(logFileMaxAgeEnv, 7)
+	logUtc = gnomon.EnvGetBool(logUtcEnv)
+	logLevel = gnomon.EnvGetD(logLevelEnv, "Debug")
+	logProduction = gnomon.EnvGetBool(logProductionEnv)
+	log.Fit(logLevel, logFileDir, logFileMaxSize, logFileMaxAge, logUtc, logProduction)
 }
 
 var (
@@ -80,7 +96,7 @@ func gRPCListener() {
 	)
 	log.Info("raft", log.Field("gRPC", "start"), log.Field("port", port))
 	//  创建server端监听端口
-	if listener, err = net.Listen("tcp", gnomon.String().StringBuilder(":", port)); nil != err {
+	if listener, err = net.Listen("tcp", gnomon.StringBuild(":", port)); nil != err {
 		panic(err)
 	}
 	//  创建gRPC的server
@@ -123,7 +139,7 @@ func RaftStartWithParams(params *Params) {
 	if params.TimeoutReq != 0 {
 		timeout = params.TimeoutReq
 	}
-	if gnomon.String().IsNotEmpty(params.PortReq) {
+	if gnomon.StringIsNotEmpty(params.PortReq) {
 		port = params.PortReq
 	}
 	log.Info("raft", log.Field("new", "new instance raft"))

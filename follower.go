@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/raft4go/log"
+	"github.com/aberic/gnomon/log"
 	"sync"
 	"time"
 )
@@ -106,7 +106,7 @@ func (f *follower) release() {
 
 // put 角色所属集群新增数据
 func (f *follower) put(key string, value []byte) error {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return errors.New("key can't be empty")
 	}
 	if nil == value {

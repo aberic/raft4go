@@ -107,7 +107,7 @@ type nodal struct {
 }
 
 func newNode(id, url string) (*nodal, error) {
-	if p, err := gnomon.Pool().New(10, 100, 5*time.Second, func() (c gnomon.Conn, err error) {
+	if p, err := gnomon.NewPond(10, 100, 5*time.Second, func() (c gnomon.Conn, err error) {
 		return grpc.Dial(url, grpc.WithInsecure())
 	}); nil != err {
 		return nil, err
