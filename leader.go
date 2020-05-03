@@ -91,7 +91,7 @@ func (l *leader) put(key string, value []byte) error {
 	}
 	// todo 流程待正规化
 	for _, node := range raft.persistence.nodes {
-		go func(node *nodal) {
+		go func(node *Node) {
 			_ = reqSyncData(context.Background(), node, &ReqSyncData{
 				Term:      raft.persistence.term,
 				LeaderId:  raft.persistence.node.Id,

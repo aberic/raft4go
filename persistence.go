@@ -15,10 +15,7 @@
 package raft4go
 
 import (
-	"github.com/aberic/gnomon"
-	"google.golang.org/grpc"
 	"sync"
-	"time"
 )
 
 // votedFor 投票结果
@@ -52,13 +49,13 @@ func (v *votedFor) set(id string, term int32, timestamp int64) bool {
 }
 
 // Nodes 当前Raft可见节点集合
-type Nodes map[string]*nodal
+type Nodes map[string]*Node
 
 // persistence 所有角色都拥有的持久化的状态（在响应RPC请求之前变更且持久化的状态）
 type persistence struct {
-	leader    *nodal       // 当前任务Leader
+	leader    *Node        // 当前任务Leader
 	term      int32        // 服务器的任期，初始为0，递增
-	node      *nodal       // 自身节点信息
+	node      *Node        // 自身节点信息
 	nodes     Nodes        // 当前Raft可见节点集合
 	nodesLock sync.RWMutex // 当前Raft可见节点集合锁
 	votedFor  *votedFor    // 在当前获得选票的候选人的 Id
@@ -76,9 +73,7 @@ func (p *persistence) appendNode(node *Node) {
 	if _, ok := p.nodes[node.Id]; ok {
 		return
 	}
-	if nodal, err := newNode(node.Id, node.Url); nil == err {
-		p.nodes[node.Id] = nodal
-	}
+	p.nodes[node.Id] = node
 }
 
 func (p *persistence) appendNodes(nodeList []*Node) {
@@ -88,9 +83,7 @@ func (p *persistence) appendNodes(nodeList []*Node) {
 		if _, ok := p.nodes[node.Id]; ok {
 			return
 		}
-		if nodal, err := newNode(node.Id, node.Url); nil == err {
-			p.nodes[node.Id] = nodal
-		}
+		p.nodes[node.Id] = node
 	}
 }
 
@@ -102,29 +95,4 @@ func (p *persistence) Nodes() []*Node {
 		nodes = append(nodes, &Node{Id: nodal.Id, Url: nodal.Url})
 	}
 	return nodes
-}
-
-type nodal struct {
-	Node
-	pool *gnomon.Pond
-}
-
-func newNode(id, url string) (*nodal, error) {
-	var (
-		p   *gnomon.Pond
-		err error
-	)
-	if p, err = gnomon.NewPond(10, 100, 5*time.Second, func() (c gnomon.Conn, err error) {
-		return grpc.Dial(url, grpc.WithInsecure())
-	}); nil == err {
-		return &nodal{
-			Node: Node{
-				Id:           id,
-				Url:          url,
-				UnusualTimes: 0,
-			},
-			pool: p,
-		}, nil
-	}
-	return nil, err
 }

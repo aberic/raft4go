@@ -110,7 +110,7 @@ func (c *candidate) votes() {
 	wg := sync.WaitGroup{}
 	for _, node := range raft.persistence.nodes {
 		wg.Add(1)
-		go func(node *nodal) {
+		go func(node *Node) {
 			defer wg.Done()
 			if voteGranted := reqVote(c.ctx, node, &ReqVote{
 				Id:        raft.persistence.node.Id,

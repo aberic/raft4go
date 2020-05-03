@@ -69,10 +69,10 @@ func (r *Raft) startWithParams(node *Node, nodes []*Node) {
 // init raft结构初始化
 func (r *Raft) init() {
 	r.persistence = &persistence{
-		leader: &nodal{},
+		leader: &Node{},
 		term:   0,
-		node:   &nodal{},
-		nodes:  map[string]*nodal{},
+		node:   &Node{},
+		nodes:  map[string]*Node{},
 		votedFor: &votedFor{
 			id:        "",
 			term:      0,
@@ -117,7 +117,7 @@ func (r *Raft) initEnv() {
 
 // initEnv raft环境变量初始化
 func (r *Raft) initWithParams(node *Node, nodes []*Node) {
-	raft.persistence.node = &nodal{Node: *node, pool: nil}
+	raft.persistence.node = node
 	raft.persistence.node.UnusualTimes = -1
 	raft.persistence.appendNodes(nodes)
 }

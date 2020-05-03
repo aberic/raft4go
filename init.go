@@ -31,17 +31,7 @@ import (
 	"github.com/aberic/gnomon/log"
 	"google.golang.org/grpc"
 	"net"
-	"os"
 	"sync"
-)
-
-var (
-	logFileDir     string // 日志文件目录
-	logFileMaxSize int    // 每个日志文件保存的最大尺寸 单位：M
-	logFileMaxAge  int    // 文件最多保存多少天
-	logUtc         bool   // CST & UTC 时间
-	logLevel       string // 日志级别(debugLevel/infoLevel/warnLevel/ErrorLevel/panicLevel/fatalLevel)
-	logProduction  bool   // 是否生产环境，在生产环境下控制台不会输出任何日志
 )
 
 // export GOPROXY=https://goproxy.io
@@ -52,12 +42,6 @@ func init() {
 	timeCheck = gnomon.EnvGetInt64D(timeCheckEnv, 1500)
 	timeout = gnomon.EnvGetInt64D(timeoutEnv, 2000)
 	port = gnomon.EnvGetD(portEnv, "19877")
-	logFileDir = gnomon.EnvGetD(logDirEnv, os.TempDir())
-	logFileMaxSize = gnomon.EnvGetIntD(logFileMaxSizeEnv, 1024)
-	logFileMaxAge = gnomon.EnvGetIntD(logFileMaxAgeEnv, 7)
-	logUtc = gnomon.EnvGetBool(logUtcEnv)
-	logLevel = gnomon.EnvGetD(logLevelEnv, "Debug")
-	logProduction = gnomon.EnvGetBool(logProductionEnv)
 }
 
 var (
