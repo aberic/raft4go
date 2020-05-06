@@ -18,7 +18,6 @@ import (
 	"errors"
 	"github.com/aberic/gnomon"
 	"github.com/aberic/gnomon/log"
-	"strings"
 	"sync"
 	"time"
 )
@@ -33,26 +32,14 @@ type Raft struct {
 	roleChangeLock sync.Mutex
 }
 
-// Start Raft启用方法
-func (r *Raft) start() {
-	r.once.Do(func() {
-		r.init()
-		log.Info("raft init success")
-		r.initEnv()
-		log.Info("raft env init success")
-		r.initRole()
-		log.Info("raft role init success")
-	})
-}
-
-// Start Raft启用方法
+// start Raft启用方法
 //
 // node 自身节点信息
 //
 // nodes 集群节点信息
-func (r *Raft) startWithParams(node *Node, nodes []*Node) {
+func (r *Raft) start(node *Node, nodes []*Node) {
 	if nil == node || nil == nodes {
-		log.Error("raft", log.Field("describe", "startWithParams fail"),
+		log.Error("raft", log.Field("describe", "start fail"),
 			log.Errs("params can not be nil"))
 		return
 	}
@@ -83,68 +70,10 @@ func (r *Raft) init() {
 }
 
 // initEnv raft环境变量初始化
-func (r *Raft) initEnv() {
-	// 仅测试用
-	//_ = os.Setenv(brokerID, "1")
-	//_ = os.Setenv(nodeAddr, "127.0.0.1:19880")
-	//_ = os.Setenv(cluster, "1=127.0.0.1:19877,2=127.0.0.1:19878,3=127.0.0.1:19879")
-	if k8s := gnomon.EnvGetBool(k8sEnv); k8s {
-		if r.persistence.node.Url = gnomon.EnvGet("HOSTNAME"); gnomon.StringIsEmpty(r.persistence.node.Url) {
-			log.Error("raft", log.Field("describe", "init with k8s fail"),
-				log.Field("addr", r.persistence.node.Url))
-			return
-		}
-		r.persistence.node.Id = strings.Split(r.persistence.node.Url, "-")[1]
-		log.Info("raft", log.Field("describe", "init with k8s"),
-			log.Field("addr", r.persistence.node.Url), log.Field("id", r.persistence.node.Id))
-	} else {
-		if r.persistence.node.Url = gnomon.EnvGet(nodeAddrEnv); gnomon.StringIsEmpty(r.persistence.node.Url) {
-			log.Error("raft", log.Field("describe", "init with env fail"),
-				log.Errs("NODE_ADDRESS is empty"))
-			return
-		}
-		if r.persistence.node.Id = gnomon.EnvGet(brokerIDEnv); gnomon.StringIsEmpty(r.persistence.node.Id) {
-			log.Error("raft", log.Field("describe", "init with env fail"),
-				log.Errs("broker id is not appoint"))
-			return
-		}
-		log.Info("raft", log.Field("describe", "init with env"),
-			log.Field("addr", r.persistence.node.Url), log.Field("id", r.persistence.node.Id))
-	}
-	raft.persistence.node.UnusualTimes = -1
-	r.initCluster(gnomon.EnvGet(clusterEnv))
-}
-
-// initEnv raft环境变量初始化
 func (r *Raft) initWithParams(node *Node, nodes []*Node) {
 	raft.persistence.node = node
 	raft.persistence.node.UnusualTimes = -1
 	raft.persistence.appendNodes(nodes)
-}
-
-// initCluster 初始化集群节点
-func (r *Raft) initCluster(nodesStr string) {
-	if gnomon.StringIsEmpty(nodesStr) {
-		nodesStr = gnomon.EnvGet(clusterEnv)
-	}
-	log.Info("raft", log.Field("node cluster", nodesStr))
-	if gnomon.StringIsNotEmpty(nodesStr) {
-		clusterArr := strings.Split(nodesStr, ",")
-		for _, cluster := range clusterArr {
-			clusterSplit := strings.Split(cluster, "=")
-			id := clusterSplit[0]
-			if gnomon.StringIsEmpty(id) {
-				log.Error("raft", log.Field("describe", "init with env fail"),
-					log.Errs("one of cluster's broker id is nil"))
-				continue
-			}
-			if id == r.persistence.node.Id {
-				continue
-			}
-			nodeURL := clusterSplit[1]
-			r.persistence.appendNode(&Node{Id: id, Url: nodeURL, UnusualTimes: 0})
-		}
-	}
 }
 
 var (

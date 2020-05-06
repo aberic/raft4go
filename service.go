@@ -58,12 +58,13 @@ func reqNodeList(ctx context.Context, node *Node, in *ReqNodeList) ([]*Node, err
 			resp interface{}
 			err  error
 		)
-		resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
-			// 创建grpc客户端
-			cli := NewRaftClient(conn)
-			//客户端向grpc服务端发起请求
-			return cli.NodeList(context.Background(), in)
-		})
+		resp, err = getRaftClient(node.Url).NodeList(context.Background(), in)
+		//resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
+		//	// 创建grpc客户端
+		//	cli := NewRaftClient(conn)
+		//	//客户端向grpc服务端发起请求
+		//	return cli.NodeList(context.Background(), in)
+		//})
 		if nil != err {
 			log.Warn("raft", log.Err(err))
 			errChan <- err
@@ -95,12 +96,13 @@ func reqDataList(ctx context.Context, node *Node, in *ReqDataList) ([]*Data, err
 			resp interface{}
 			err  error
 		)
-		resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
-			// 创建grpc客户端
-			cli := NewRaftClient(conn)
-			//客户端向grpc服务端发起请求
-			return cli.DataList(context.Background(), in)
-		})
+		resp, err = getRaftClient(node.Url).DataList(context.Background(), in)
+		//resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
+		//	// 创建grpc客户端
+		//	cli := NewRaftClient(conn)
+		//	//客户端向grpc服务端发起请求
+		//	return cli.DataList(context.Background(), in)
+		//})
 		if nil != err {
 			log.Warn("raft", log.Err(err))
 			errChan <- err
@@ -132,12 +134,13 @@ func reqData(ctx context.Context, node *Node, in *ReqData) ([]byte, error) {
 			resp interface{}
 			err  error
 		)
-		resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
-			// 创建grpc客户端
-			cli := NewRaftClient(conn)
-			//客户端向grpc服务端发起请求
-			return cli.Data(context.Background(), in)
-		})
+		resp, err = getRaftClient(node.Url).Data(context.Background(), in)
+		//resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
+		//	// 创建grpc客户端
+		//	cli := NewRaftClient(conn)
+		//	//客户端向grpc服务端发起请求
+		//	return cli.Data(context.Background(), in)
+		//})
 		if nil != err {
 			log.Warn("raft", log.Err(err))
 			errChan <- err
@@ -168,18 +171,13 @@ func reqSyncData(ctx context.Context, node *Node, in *ReqSyncData) error {
 		var (
 			err error
 		)
-		//_, err = rpc(url, func(conn *grpc.ClientConn) (interface{}, error) {
+		_, err = getRaftClient(node.Url).SyncData(context.Background(), in)
+		//_, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
 		//	// 创建grpc客户端
 		//	cli := NewRaftClient(conn)
 		//	//客户端向grpc服务端发起请求
 		//	return cli.SyncData(context.Background(), in)
 		//})
-		_, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
-			// 创建grpc客户端
-			cli := NewRaftClient(conn)
-			//客户端向grpc服务端发起请求
-			return cli.SyncData(context.Background(), in)
-		})
 		if nil != err {
 			log.Warn("raft", log.Err(err))
 			errChan <- err
@@ -211,12 +209,13 @@ func reqVote(ctx context.Context, node *Node, in *ReqVote) bool {
 			resp interface{}
 			err  error
 		)
-		resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
-			// 创建grpc客户端
-			cli := NewRaftClient(conn)
-			//客户端向grpc服务端发起请求
-			return cli.Vote(context.Background(), in)
-		})
+		resp, err = getRaftClient(node.Url).Vote(context.Background(), in)
+		//resp, err = gnomon.GRPCRequestPools(node.Url, func(conn *grpc.ClientConn) (interface{}, error) {
+		//	// 创建grpc客户端
+		//	cli := NewRaftClient(conn)
+		//	//客户端向grpc服务端发起请求
+		//	return cli.Vote(context.Background(), in)
+		//})
 		if nil != err {
 			log.Warn("raft", log.Err(err))
 			errChan <- err

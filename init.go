@@ -88,6 +88,7 @@ func gRPCListener() {
 	rpcServer := grpc.NewServer()
 	// 注册自定义服务
 	RegisterRaftServer(rpcServer, &Server{})
+	rpcServer.GetServiceInfo()
 	//  启动gRPC服务
 	if err = rpcServer.Serve(listener); nil != err {
 		panic(err)
@@ -122,7 +123,7 @@ func RaftStart(params *Params) {
 	once.Do(func() {
 		go gRPCListener()
 		raft = &Raft{}
-		raft.startWithParams(params.Node, params.Nodes)
+		raft.start(params.Node, params.Nodes)
 	})
 }
 

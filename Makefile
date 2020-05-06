@@ -1,13 +1,13 @@
 PKGS_WITH_OUT_EXAMPLES := $(shell go list ./... | grep -v 'examples/')
-PKGS_WITH_OUT_EXAMPLES_AND_UTILS := $(shell go list ./... | grep -v 'examples/\|utils/')
-GO_FILES := $(shell find . -name "*.go" -not -name "*_test.go" -not -path "./vendor/*" -not -path ".git/*" -print0 | xargs -0)
+PKGS_WITH_OUT_CUSTOM := $(shell go list ./... | grep -v 'examples/\|utils/')
+GO_FILES := $(shell find . -name "*.go" -not -name "*_test.go"  -not -name "*.pb.go"  -not -path "./vendor/*" -not -path "./example/*" -not -path ".git/*" -print0 | xargs -0)
 
 export GOPROXY=https://goproxy.io
 export GO111MODULE=on
 
-checkTravis: overalls vet lint misspell staticcheck cyclo const veralls test
+checkTravis: overalls vet lint misspell cyclo const veralls test
 
-checkLocal: overalls vet lint misspell staticcheck cyclo const test
+checkLocal: overalls vet lint misspell cyclo const test
 
 overalls:
 	@echo "overalls"

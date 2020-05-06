@@ -31,7 +31,7 @@ func (s *Server) Heartbeat(ctx context.Context, req *ReqHeartBeat) (resp *RespHe
 		addr string
 		port int
 	)
-	log.Debug("raft", log.Field("receive heartbeat", req))
+	//log.Debug("raft", log.Field("receive heartbeat", req))
 	if _, ok := raft.persistence.nodes[req.Id]; !ok {
 		raft.persistence.appendNode(&Node{Id: req.Id, Url: req.Url, UnusualTimes: 0})
 	}
